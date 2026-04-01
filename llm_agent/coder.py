@@ -4,10 +4,24 @@ llm_agent/coder.py
 CoderAgent: generates a Java implementation from a problem spec.
 """
 
+import json
 import re
 
 
 class CoderAgent:
+    CODE_JSON_SCHEMA = {
+        "name": "java_solution",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "java_code": {"type": "string"},
+            },
+            "required": ["java_code"],
+            "additionalProperties": False,
+        },
+    }
+
     def __init__(self, llm):
         self.llm = llm
 
@@ -56,18 +70,15 @@ class CoderAgent:
 
         prompt = f"""You generate Java code.
 
-OUTPUT FORMAT:
-<CODE>
-valid complete single-file Java code
-</CODE>
+Return JSON only. Field:
+- java_code: valid complete single-file Java source
 
-Rules:
-- No markdown, no backticks, no explanations outside the tags
+Rules for java_code:
 - Complete compilable Java file
 - Class named exactly: {class_name}
 - No package declaration, no main method, no JUnit imports
 - All necessary imports at the top (java.util.* etc.)
-- Everything inside <CODE> </CODE> — nothing outside
+- No markdown, no explanations
 
 IMPORTANT: Read the description carefully. Do NOT assume this is a problem
 you have seen before — the framing and constraints may differ from similar problems.
@@ -83,28 +94,27 @@ Method signature to implement:
 {retry_block}
 """
 
-        response = self.llm.generate_response(prompt, temperature=0.8)
-        code = self._extract_code(response)
+        response = self.llm.generate_response(
+            prompt,
+            temperature=0.8,
+            json_schema=self.CODE_JSON_SCHEMA,
+        )
+        code = self._extract_code_from_json(response)
         code = self._strip_package(code)
         return {"filename": class_name, "code": code}
 
     @staticmethod
-    def _extract_code(text: str) -> str:
-        start = text.find("<CODE>")
-        end   = text.find("</CODE>")
-        if start != -1 and end != -1:
-            code = text[start + len("<CODE>"):end].strip()
-        else:
-            fence = re.search(r"```java\s*(.*?)```", text, re.DOTALL | re.IGNORECASE)
-            if not fence:
-                fence = re.search(r"```\s*(.*?)```", text, re.DOTALL)
-            if not fence:
-                raise ValueError(
-                    f"Model output does not contain proper <CODE> tags or fenced code:\n{text[:500]}"
-                )
-            code = fence.group(1).strip()
+    def _extract_code_from_json(text: str) -> str:
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Model output is not valid JSON: {text[:500]}") from exc
+
+        code = payload.get("java_code", "")
+        if not isinstance(code, str):
+            raise ValueError("Model JSON does not contain string field 'java_code'.")
         if not code:
-            raise ValueError("Extracted code block is empty.")
+            raise ValueError("Field 'java_code' is empty.")
         return code
 
     @staticmethod
@@ -118,7 +128,6 @@ Method signature to implement:
     def _clean(text: str) -> str:
         text = re.sub(r'```(?:java)?\s*', '', text)
         text = re.sub(r'```', '', text)
-        text = re.sub(r'</?CODE>', '', text)
         return text.strip()
 
     @staticmethod

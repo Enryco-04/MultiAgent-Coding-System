@@ -28,7 +28,12 @@ class CodexClient:
             )
         self.url     = "https://api.openai.com/v1/responses"
 
-    def generate_response(self, prompt: str, temperature: float = 0.2) -> str:
+    def generate_response(
+        self,
+        prompt: str,
+        temperature: float = 0.2,
+        json_schema: dict | None = None,
+    ) -> str:
         # NOTE: the Responses API does not expose a temperature parameter for
         # codex-mini-latest; the argument is accepted here so CodexClient and
         # OllamaClient share the same interface.
@@ -40,6 +45,15 @@ class CodexClient:
             "model": self.model,
             "input": prompt,
         }
+        if json_schema:
+            payload["text"] = {
+                "format": {
+                    "type": "json_schema",
+                    "name": json_schema.get("name", "structured_output"),
+                    "schema": json_schema["schema"],
+                    "strict": json_schema.get("strict", True),
+                }
+            }
         session = requests.Session()
         session.trust_env = False
         resp = session.post(self.url, headers=headers, json=payload, timeout=600)
@@ -111,7 +125,12 @@ class OllamaClient:
         self.model = model
         self.url   = f"{base_url}/api/generate"
     
-    def generate_response(self, prompt: str, temperature: float = 0.2) -> str:
+    def generate_response(
+        self,
+        prompt: str,
+        temperature: float = 0.2,
+        json_schema: dict | None = None,
+    ) -> str:
         payload = {"model": self.model, "prompt": prompt, "stream": True,
                    "options": {"temperature": temperature}}
         try:

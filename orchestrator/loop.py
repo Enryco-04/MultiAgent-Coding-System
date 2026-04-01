@@ -75,7 +75,7 @@ class EvaluationLoop:
                 print(f"  [coder] format error: {exc}")
                 hints = (
                     f"Your response format was wrong: {exc}. "
-                    "Wrap the code in <CODE> and </CODE> tags, nothing outside."
+                    "Return strict JSON with a single field: java_code."
                 )
                 attempt_entry["status"] = "CODER_FORMAT_ERROR"
                 attempt_entry["analyzer_hints"] = hints
