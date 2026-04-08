@@ -17,6 +17,8 @@ from llm_agent.analyzer         import AnalyzerAgent
 from services.workspace_manager import WorkspaceManager
 from services.docker_runner     import DockerRunner
 from services.sonar_service     import SonarService
+import re
+import uuid
 
 MAX_ITER             = 5
 SONAR_MAX_BUGS        = 0
@@ -31,6 +33,7 @@ class EvaluationLoop:
         self.workspace = workspace
         self.runner    = runner
         self.sonar     = sonar
+        self._run_nonce = uuid.uuid4().hex[:8]
 
     def run(self, problem: dict) -> dict:
         pid        = problem["id"]
@@ -117,10 +120,12 @@ class EvaluationLoop:
             if not result["compile_ok"]:
                 print(f"  [junit] COMPILE FAILED")
                 print(f"  {result['compile_errors'][:400]}")
-                hints = self.analyzer.analyze_compile_errors(
-                    last_code, result["compile_errors"]
-                )
-                #print(f"  [analyzer] {hints[:200]}")
+                if attempt < MAX_ITER:
+                    hints = self.analyzer.analyze_compile_errors(
+                        last_code, result["compile_errors"]
+                    )
+                else:
+                    hints = None
                 attempt_entry["status"] = "COMPILE_FAILED"
                 attempt_entry["analyzer_hints"] = hints
                 attempt_history.append(attempt_entry)
@@ -143,8 +148,10 @@ class EvaluationLoop:
                 best_iter   = attempt
 
             if not result["success"]:
-                hints = self.analyzer.analyze_test_failures(last_code, failures)
-                #print(f"  [analyzer] {hints[:200]}")
+                if attempt < MAX_ITER:
+                    hints = self.analyzer.analyze_test_failures(last_code, failures)
+                else:
+                    hints = None
                 attempt_entry["status"] = "TESTS_FAILED"
                 attempt_entry["analyzer_hints"] = hints
                 attempt_history.append(attempt_entry)
@@ -160,7 +167,9 @@ class EvaluationLoop:
                 attempt_history.append(attempt_entry)
                 break
 
-            sonar_metrics, sonar_issues = self._run_sonar(attempt)
+            sonar_component = self._build_sonar_component(pid, attempt)
+            print(f"  [DEBUG][sonar] component_key={sonar_component}")
+            sonar_metrics, sonar_issues = self._run_sonar(attempt, sonar_component)
             final_sonar_metrics = sonar_metrics
             final_sonar_issues  = sonar_issues
             attempt_entry["sonar_metrics"] = sonar_metrics
@@ -190,7 +199,8 @@ class EvaluationLoop:
                     try:
                         filtered_issues = self.sonar.get_issues_for_metric(
                             failed_metric,
-                            in_new_code_period=True,
+                            component=sonar_component,
+                            in_new_code_period=False,
                         )
                         print(
                             f"  [sonar] filtered issues for {failed_metric}: "
@@ -235,18 +245,31 @@ class EvaluationLoop:
             "final_code":    last_code,
         }
 
-    def _run_sonar(self, iteration: int) -> tuple[dict, list]:
+    def _run_sonar(self, iteration: int, component: str) -> tuple[dict, list]:
         iter_path = self.workspace.iteration_path(iteration)
         try:
-            self.sonar.scan(iter_path, iteration)
-            metrics = self.sonar.get_metrics()
-            issues  = self.sonar.get_issues(in_new_code_period=True)
+            self.sonar.scan(iter_path, iteration, project_key=component)
+            metrics = self.sonar.get_metrics(component=component)
+            issues  = self.sonar.get_issues(
+                component=component,
+                in_new_code_period=False,
+                retries=8,
+                retry_delay=2,
+                retry_on_empty=True,
+            )
             print(f"  [sonar] metrics: {metrics}")
             print(f"  [DEBUG][sonar] _run_sonar fetched issues_count={len(issues)}")
             return metrics, issues
         except Exception as exc:
             print(f"  [sonar] scan failed: {exc}")
             return {}, []
+
+    def _build_sonar_component(self, problem_id: str, iteration: int) -> str:
+        if not self.sonar:
+            return ""
+        base = self.sonar.project_key
+        sanitized = re.sub(r"[^a-zA-Z0-9_.:-]", "_", problem_id)
+        return f"{base}_{sanitized}_it{iteration}_{self._run_nonce}"
 
     @staticmethod
     def _quality_ok(metrics: dict) -> tuple[bool, str]:

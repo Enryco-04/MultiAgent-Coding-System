@@ -33,6 +33,7 @@ class CodexClient:
         prompt: str,
         temperature: float = 0.2,
         json_schema: dict | None = None,
+        system_prompt: str | None = None,
     ) -> str:
         # NOTE: the Responses API does not expose a temperature parameter for
         # codex-mini-latest; the argument is accepted here so CodexClient and
@@ -41,9 +42,23 @@ class CodexClient:
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type":  "application/json",
         }
+        if system_prompt:
+            input_payload = [
+                {
+                    "role": "system",
+                    "content": [{"type": "input_text", "text": system_prompt}],
+                },
+                {
+                    "role": "user",
+                    "content": [{"type": "input_text", "text": prompt}],
+                },
+            ]
+        else:
+            input_payload = prompt
+
         payload = {
             "model": self.model,
-            "input": prompt,
+            "input": input_payload,
         }
         if json_schema:
             payload["text"] = {
@@ -130,8 +145,10 @@ class OllamaClient:
         prompt: str,
         temperature: float = 0.2,
         json_schema: dict | None = None,
+        system_prompt: str | None = None,
     ) -> str:
-        payload = {"model": self.model, "prompt": prompt, "stream": True,
+        full_prompt = prompt if not system_prompt else f"{system_prompt}\n\n{prompt}"
+        payload = {"model": self.model, "prompt": full_prompt, "stream": True,
                    "options": {"temperature": temperature}}
         try:
             resp = requests.post(self.url, json=payload, stream=True, timeout=600)

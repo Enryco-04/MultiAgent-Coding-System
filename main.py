@@ -42,33 +42,17 @@ def _format_detailed_results(results: list[dict]) -> list[dict]:
             run = jr.get("tests_run", 0)
             iterations.append(
                 {
-                    "iterazione": a.get("iteration"),
-                    "stato": a.get("status"),
-                    "test_passati": f"{passed}/{run}",
-                    "test_totali": run,
-                    "test_falliti_numero": jr.get("tests_failed", 0),
-                    "quali_test_sono_falliti": jr.get("failures_with_values", []),
-                    "compile_ok": jr.get("compile_ok", False),
-                    "compile_errors": jr.get("compile_errors"),
+                    "attempt": a.get("iteration"),
+                    "passrate": f"{passed}/{run}",
+                    "tests_failed": jr.get("failures_with_values", []),
                     "sonar_metrics": a.get("sonar_metrics", {}),
-                    "sonar_issue_count": len(a.get("sonar_issues", [])),
-                    "sonar_issues": a.get("sonar_issues", []),
-                    "analyzer_hints": a.get("analyzer_hints"),
                 }
             )
 
-        final_jr = r.get("junit_result") or {}
         detailed.append(
             {
-                "problema": r.get("problem_id"),
-                "titolo": r.get("title"),
-                "stato_finale": r.get("status"),
-                "migliore_iterazione": r.get("attempts"),
-                "miglior_test_passati": f"{final_jr.get('tests_passed', 0)}/{final_jr.get('tests_run', 0)}",
-                "iterazioni": iterations,
-                "sonar_metrics_finali": r.get("sonar_metrics", {}),
-                "sonar_issue_count_finale": len(r.get("sonar_issues", [])),
-                "sonar_issues_finali": r.get("sonar_issues", []),
+                "problem_id": r.get("problem_id"),
+                "attempts": iterations,
             }
         )
     return detailed

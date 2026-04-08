@@ -5,6 +5,283 @@ APPS benchmark problems adapted to Java + JUnit 5.
 """
 
 PROBLEMS = [
+        {
+        # ──────────────────────────────────────────────────────────────────────
+        # Problem: 1579_E2. Array Optimization by Deque
+        # Source  : deepmind/code_contests  |  difficulty 11  |  cf_rating 1700
+        # ──────────────────────────────────────────────────────────────────────
+        "id": "array_optimization_deque",
+        "title": "Array Optimization by Deque",
+        "class_name": "ArrayOptimizationDeque",
+
+        "signature": "public static String solve(String input)",
+
+        "description": """\
+Given an integer array a[1 … n], consider an initially empty deque
+(double-ended queue). The elements are added one by one, starting from
+a[1] and ending with a[n]. Before adding each element, you may choose
+whether to push it to the front or to the back of the deque.
+
+Find the minimum possible number of inversions in the deque after all
+elements have been inserted.
+
+An inversion is a pair of indices (i, j) with i < j and d[i] > d[j].
+
+Input format:
+  Line 1: t (number of test cases, 1 ≤ t ≤ 1000)
+  For each test case:
+    Line 1: n (1 ≤ n ≤ 2·10^5)
+    Line 2: n space-separated integers a_i (-10^9 ≤ a_i ≤ 10^9)
+  Sum of n over all test cases ≤ 2·10^5.
+
+Output format:
+  t lines, each containing one integer — the minimum number of inversions.
+
+Implement a complete parser/solver in solve(String input) and return
+exactly the expected output.
+""",
+
+        "junit_test": """\
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+class ArrayOptimizationDequeTest {
+
+    private static String norm(String s) {
+        if (s == null) return "";
+        s = s.replace("\\r\\n", "\\n").replace("\\r", "\\n");
+        String[] lines = s.split("\\n", -1);
+        StringBuilder sb = new StringBuilder();
+        for (String line : lines) {
+            int end = line.length();
+            while (end > 0 && Character.isWhitespace(line.charAt(end - 1))) end--;
+            sb.append(line, 0, end).append('\\n');
+        }
+        return sb.toString().trim();
+    }
+
+    private void assertCase(String input, String expected) {
+        String actual = ArrayOptimizationDeque.solve(input);
+        assertEquals(norm(expected), norm(actual));
+    }
+
+    // ── official example ──────────────────────────────────────────────────────
+
+    @Test void case00() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n1 3 1 3 2\\n", "2\\n0\\n1\\n0\\n1\\n2\\n"); }
+
+    // ── single-element arrays always give 0 inversions ────────────────────────
+
+    @Test void case01() { assertCase("1\\n1\\n-1000000000\\n", "0\\n"); }
+    @Test void case03() { assertCase("1\\n1\\n-1090552905\\n", "0\\n"); }
+    @Test void case71() { assertCase("1\\n1\\n-1572755758\\n", "0\\n"); }
+    @Test void case72() { assertCase("1\\n1\\n-1994447814\\n", "0\\n"); }
+    @Test void case77() { assertCase("1\\n1\\n-3557835192\\n", "0\\n"); }
+    @Test void case81() { assertCase("1\\n1\\n-1177154308\\n", "0\\n"); }
+    @Test void case85() { assertCase("1\\n1\\n-404786817\\n", "0\\n"); }
+    @Test void case86() { assertCase("1\\n1\\n-2306668450\\n", "0\\n"); }
+    @Test void case88() { assertCase("1\\n1\\n-170211275\\n", "0\\n"); }
+    @Test void case101() { assertCase("1\\n1\\n-41790379\\n", "0\\n"); }
+    @Test void case149() { assertCase("1\\n1\\n-1182291871\\n", "0\\n"); }
+    @Test void case152() { assertCase("1\\n1\\n-2072621836\\n", "0\\n"); }
+    @Test void case156() { assertCase("1\\n1\\n-2060860677\\n", "0\\n"); }
+    @Test void case161() { assertCase("1\\n1\\n-5490202626\\n", "0\\n"); }
+    @Test void case164() { assertCase("1\\n1\\n-303186913\\n", "0\\n"); }
+    @Test void case167() { assertCase("1\\n1\\n-335830449\\n", "0\\n"); }
+    @Test void case170() { assertCase("1\\n1\\n-2980236549\\n", "0\\n"); }
+    @Test void case171() { assertCase("1\\n1\\n-137484530\\n", "0\\n"); }
+
+    // ── n=5, large values ─────────────────────────────────────────────────────
+
+    @Test void case02() { assertCase("1\\n5\\n999999996 999999997 1000000000 999999998 999999999\\n", "2\\n"); }
+    @Test void case05() { assertCase("1\\n5\\n999999996 594621428 1000000000 999999998 999999999\\n", "2\\n"); }
+    @Test void case07() { assertCase("1\\n5\\n999999996 999999997 1000000000 714491994 999999999\\n", "1\\n"); }
+    @Test void case30() { assertCase("1\\n5\\n1952608156 755572301 1101000000 999999998 999999999\\n", "4\\n"); }
+    @Test void case31() { assertCase("1\\n5\\n1281844869 594621428 1000000000 1496043289 1013691690\\n", "3\\n"); }
+    @Test void case75() { assertCase("1\\n5\\n999999996 594621428 1001000000 999999998 999999999\\n", "2\\n"); }
+    @Test void case80() { assertCase("1\\n5\\n999999996 755572301 1001000000 999999998 999999999\\n", "2\\n"); }
+    @Test void case87() { assertCase("1\\n5\\n999999996 594621428 1000000000 1496043289 999999999\\n", "2\\n"); }
+    @Test void case90() { assertCase("1\\n5\\n999999996 594621428 1001000000 628405048 999999999\\n", "2\\n"); }
+    @Test void case94() { assertCase("1\\n5\\n999999996 755572301 1101000000 999999998 999999999\\n", "2\\n"); }
+    @Test void case97() { assertCase("1\\n5\\n999999996 999999997 1000000000 1318373358 999999999\\n", "2\\n"); }
+    @Test void case100() { assertCase("1\\n5\\n1281844869 594621428 1000000000 1496043289 999999999\\n", "2\\n"); }
+    @Test void case103() { assertCase("1\\n5\\n999999996 256091627 1001000000 628405048 999999999\\n", "2\\n"); }
+    @Test void case105() { assertCase("1\\n5\\n999999996 755572301 1101000000 999999998 1368676000\\n", "1\\n"); }
+    @Test void case107() { assertCase("1\\n5\\n999999996 999999997 1001000000 1318373358 999999999\\n", "2\\n"); }
+    @Test void case109() { assertCase("1\\n5\\n236424498 594621428 1000000000 1496043289 999999999\\n", "2\\n"); }
+    @Test void case110() { assertCase("1\\n5\\n999999996 256091627 1001000000 628405048 1063115534\\n", "1\\n"); }
+    @Test void case113() { assertCase("1\\n5\\n999999996 755572301 0101000000 999999998 1368676000\\n", "0\\n"); }
+    @Test void case116() { assertCase("1\\n5\\n236424498 594621428 1010000000 1496043289 999999999\\n", "2\\n"); }
+    @Test void case118() { assertCase("1\\n5\\n999999996 256091627 1001000000 330631407 1063115534\\n", "1\\n"); }
+    @Test void case121() { assertCase("1\\n5\\n999999996 755572301 0101000000 733198157 1368676000\\n", "1\\n"); }
+    @Test void case124() { assertCase("1\\n5\\n236424498 842458350 1010000000 1496043289 999999999\\n", "2\\n"); }
+    @Test void case125() { assertCase("1\\n5\\n875031871 256091627 1001000000 330631407 1063115534\\n", "1\\n"); }
+    @Test void case127() { assertCase("1\\n5\\n999999996 755572301 0101000000 90693554 1368676000\\n", "0\\n"); }
+    @Test void case130() { assertCase("1\\n5\\n236424498 842458350 1010100000 1496043289 999999999\\n", "2\\n"); }
+    @Test void case132() { assertCase("1\\n5\\n999999996 109225457 0101000000 90693554 1368676000\\n", "0\\n"); }
+    @Test void case135() { assertCase("1\\n5\\n236424498 842458350 1000100000 1496043289 999999999\\n", "2\\n"); }
+    @Test void case138() { assertCase("1\\n5\\n999999996 109225457 0101000000 138689760 1368676000\\n", "1\\n"); }
+    @Test void case141() { assertCase("1\\n5\\n999999996 26547904 0101000000 138689760 1368676000\\n", "2\\n"); }
+    @Test void case145() { assertCase("1\\n5\\n999999996 26547904 0101100000 138689760 1368676000\\n", "2\\n"); }
+    @Test void case147() { assertCase("1\\n5\\n999999996 26547904 0101100010 138689760 1368676000\\n", "2\\n"); }
+    @Test void case150() { assertCase("1\\n5\\n999999996 999999997 1000000000 999999998 1212312430\\n", "1\\n"); }
+    @Test void case155() { assertCase("1\\n5\\n999999996 594621428 1000000000 999999998 1844965305\\n", "1\\n"); }
+    @Test void case159() { assertCase("1\\n5\\n999999996 594621428 1001000000 1449709188 999999999\\n", "2\\n"); }
+    @Test void case163() { assertCase("1\\n5\\n912921884 755572301 1001000000 999999998 999999999\\n", "2\\n"); }
+    @Test void case172() { assertCase("1\\n5\\n999999996 472578341 1001000000 628405048 999999999\\n", "2\\n"); }
+    @Test void case175() { assertCase("1\\n5\\n999999996 999999997 1000000100 1318373358 999999999\\n", "2\\n"); }
+    @Test void case179() { assertCase("1\\n5\\n999999996 256091627 1001000000 628405048 1112913869\\n", "1\\n"); }
+    @Test void case183() { assertCase("1\\n5\\n1009392756 755572301 1101000000 999999998 1368676000\\n", "1\\n"); }
+    @Test void case186() { assertCase("1\\n5\\n999999996 999999997 1001000000 1318373358 195849909\\n", "0\\n"); }
+    @Test void case188() { assertCase("1\\n5\\n236424498 594621428 1000100000 1496043289 999999999\\n", "2\\n"); }
+    @Test void case190() { assertCase("1\\n5\\n999999996 14187850 1001000000 628405048 1063115534\\n", "1\\n"); }
+    @Test void case193() { assertCase("1\\n5\\n999999996 755572301 0101000000 999999998 1770800587\\n", "0\\n"); }
+    @Test void case195() { assertCase("1\\n5\\n236424498 594621428 1010001000 1496043289 999999999\\n", "2\\n"); }
+    @Test void case196() { assertCase("1\\n5\\n999999996 256091627 0001000000 330631407 1063115534\\n", "1\\n"); }
+    @Test void case198() { assertCase("1\\n5\\n999999996 755572301 0101000000 407201525 1368676000\\n", "1\\n"); }
+    @Test void case200() { assertCase("1\\n5\\n236424498 842458350 1010000000 1496043289 1990754\\n", "0\\n"); }
+    @Test void case202() { assertCase("1\\n5\\n875031871 256091627 1001000000 219086351 1063115534\\n", "0\\n"); }
+
+    // ── 6-case batches ────────────────────────────────────────────────────────
+
+    @Test void case04() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n2 3 1 3 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case06() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 4 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n1 3 1 3 2\\n", "2\\n0\\n1\\n0\\n1\\n2\\n"); }
+    @Test void case08() { assertCase("6\\n4\\n3 0 5 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n2 3 1 3 2\\n", "0\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case09() { assertCase("6\\n4\\n3 7 5 1\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n2 3 1 4 2\\n", "1\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case10() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 0\\n3\\n3 1 2\\n4\\n-1 2 1 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n1\\n1\\n1\\n1\\n"); }
+    @Test void case11() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 5 1\\n3\\n3 1 2\\n4\\n-1 2 1 -1\\n4\\n4 7 1 3\\n5\\n1 3 1 3 2\\n", "2\\n0\\n1\\n1\\n1\\n2\\n"); }
+    @Test void case12() { assertCase("6\\n4\\n3 13 5 5\\n3\\n3 2 1\\n3\\n0 1 2\\n4\\n-1 2 2 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n0\\n0\\n1\\n1\\n"); }
+    @Test void case13() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 0\\n3\\n1 1 2\\n4\\n-1 2 1 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n0\\n1\\n1\\n1\\n"); }
+    @Test void case14() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 0 0\\n3\\n6 1 2\\n4\\n-1 2 3 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 0\\n", "2\\n0\\n1\\n0\\n1\\n0\\n"); }
+    @Test void case15() { assertCase("6\\n4\\n3 0 5 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -2\\n4\\n4 5 1 3\\n5\\n2 3 1 3 1\\n", "0\\n0\\n1\\n0\\n1\\n0\\n"); }
+    @Test void case16() { assertCase("6\\n4\\n3 7 8 10\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 1 -1\\n4\\n4 5 1 3\\n5\\n2 3 0 4 2\\n", "0\\n0\\n1\\n1\\n1\\n1\\n"); }
+    @Test void case17() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 5 1\\n3\\n3 2 2\\n4\\n-1 2 1 -1\\n4\\n4 7 1 3\\n5\\n1 3 1 3 2\\n", "2\\n0\\n0\\n1\\n1\\n2\\n"); }
+    @Test void case18() { assertCase("6\\n4\\n3 7 5 7\\n3\\n3 2 0\\n3\\n1 1 2\\n4\\n-1 2 1 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "1\\n0\\n0\\n1\\n1\\n1\\n"); }
+    @Test void case19() { assertCase("6\\n4\\n3 7 5 7\\n3\\n3 2 0\\n3\\n1 1 2\\n4\\n-1 2 1 -1\\n4\\n4 3 1 3\\n5\\n1 3 0 4 2\\n", "1\\n0\\n0\\n1\\n1\\n2\\n"); }
+    @Test void case20() { assertCase("6\\n4\\n3 7 8 10\\n3\\n3 2 1\\n3\\n3 1 0\\n4\\n-1 2 1 -1\\n4\\n2 5 1 3\\n5\\n2 3 0 4 2\\n", "0\\n0\\n0\\n1\\n1\\n1\\n"); }
+    @Test void case21() { assertCase("6\\n4\\n3 7 8 10\\n3\\n3 2 1\\n3\\n3 1 0\\n4\\n-1 2 1 -1\\n4\\n2 5 1 3\\n5\\n2 3 0 2 2\\n", "0\\n0\\n0\\n1\\n1\\n2\\n"); }
+    @Test void case22() { assertCase("6\\n4\\n3 7 8 1\\n3\\n3 2 1\\n3\\n3 1 0\\n4\\n-1 2 1 -1\\n4\\n0 5 1 3\\n5\\n2 3 0 2 2\\n", "0\\n0\\n0\\n1\\n2\\n2\\n"); }
+    @Test void case23() { assertCase("6\\n4\\n3 7 5 7\\n3\\n3 2 0\\n3\\n1 1 2\\n4\\n-1 2 1 0\\n4\\n4 3 2 3\\n5\\n1 3 0 8 2\\n", "1\\n0\\n0\\n2\\n1\\n2\\n"); }
+    @Test void case24() { assertCase("6\\n4\\n3 7 5 7\\n3\\n3 2 0\\n3\\n1 1 2\\n4\\n-1 2 1 0\\n4\\n4 3 2 3\\n5\\n1 3 0 8 1\\n", "1\\n0\\n0\\n2\\n1\\n1\\n"); }
+    @Test void case25() { assertCase("6\\n4\\n3 1 5 7\\n3\\n3 2 0\\n3\\n1 1 2\\n4\\n-1 2 1 0\\n4\\n4 3 2 3\\n5\\n1 3 0 8 1\\n", "0\\n0\\n0\\n2\\n1\\n1\\n"); }
+    @Test void case26() { assertCase("6\\n4\\n3 7 8 1\\n3\\n3 2 1\\n3\\n3 1 0\\n4\\n-1 2 1 -2\\n4\\n0 5 1 3\\n5\\n2 3 0 2 0\\n", "0\\n0\\n0\\n1\\n2\\n1\\n"); }
+    @Test void case27() { assertCase("6\\n4\\n3 1 5 7\\n3\\n3 2 0\\n3\\n1 1 2\\n4\\n-1 2 1 0\\n4\\n4 3 2 3\\n5\\n1 3 1 8 1\\n", "0\\n0\\n0\\n2\\n1\\n0\\n"); }
+    @Test void case28() { assertCase("6\\n4\\n3 1 5 7\\n3\\n3 2 0\\n3\\n1 1 2\\n4\\n-1 2 2 0\\n4\\n4 3 2 3\\n5\\n1 3 1 8 1\\n", "0\\n0\\n0\\n1\\n1\\n0\\n"); }
+    @Test void case29() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 0\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 0 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n1\\n0\\n2\\n1\\n"); }
+    @Test void case32() { assertCase("6\\n4\\n5 7 5 5\\n3\\n3 0 0\\n3\\n6 1 2\\n4\\n-2 2 3 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 0\\n", "0\\n0\\n1\\n1\\n1\\n0\\n"); }
+    @Test void case33() { assertCase("6\\n4\\n3 0 4 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -2\\n4\\n4 5 1 5\\n5\\n2 3 1 3 1\\n", "0\\n0\\n1\\n0\\n0\\n0\\n"); }
+    @Test void case34() { assertCase("6\\n4\\n3 7 5 7\\n3\\n3 2 0\\n3\\n1 1 2\\n4\\n-1 2 1 -1\\n4\\n4 3 2 6\\n5\\n1 3 0 8 2\\n", "1\\n0\\n0\\n1\\n0\\n2\\n"); }
+    @Test void case35() { assertCase("6\\n4\\n7 3 5 5\\n3\\n3 0 0\\n3\\n6 1 2\\n4\\n-1 2 3 -1\\n4\\n4 4 2 4\\n5\\n1 3 0 4 0\\n", "2\\n0\\n1\\n0\\n0\\n0\\n"); }
+    @Test void case36() { assertCase("6\\n4\\n3 7 5 7\\n3\\n3 2 0\\n3\\n1 1 2\\n4\\n-1 2 1 0\\n4\\n4 3 2 0\\n5\\n1 3 0 8 2\\n", "1\\n0\\n0\\n2\\n0\\n2\\n"); }
+    @Test void case37() { assertCase("6\\n4\\n3 7 8 1\\n3\\n3 2 1\\n3\\n3 1 0\\n4\\n-1 2 1 -2\\n4\\n0 5 1 3\\n5\\n2 2 0 2 2\\n", "0\\n0\\n0\\n1\\n2\\n0\\n"); }
+    @Test void case38() { assertCase("6\\n4\\n6 7 5 1\\n3\\n3 2 0\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n2 0 1 4 2\\n", "0\\n0\\n1\\n0\\n1\\n2\\n"); }
+    @Test void case39() { assertCase("6\\n4\\n2 7 5 7\\n3\\n3 2 0\\n3\\n1 1 2\\n4\\n-1 2 1 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 0\\n", "1\\n0\\n0\\n1\\n1\\n0\\n"); }
+    @Test void case40() { assertCase("6\\n4\\n3 0 4 5\\n3\\n3 2 1\\n3\\n3 1 4\\n4\\n-1 2 2 -1\\n4\\n4 5 1 2\\n5\\n2 3 1 3 1\\n", "0\\n0\\n0\\n0\\n1\\n0\\n"); }
+    @Test void case41() { assertCase("6\\n4\\n5 3 5 5\\n3\\n3 0 1\\n3\\n6 1 2\\n4\\n-1 2 3 -1\\n4\\n4 4 2 3\\n5\\n0 3 0 4 0\\n", "0\\n1\\n1\\n0\\n1\\n0\\n"); }
+    @Test void case42() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 1 2\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 2 1 3\\n5\\n2 3 0 4 2\\n", "2\\n1\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case43() { assertCase("6\\n4\\n5 1 5 7\\n3\\n3 3 0\\n3\\n1 1 2\\n4\\n-1 2 1 0\\n4\\n4 1 2 3\\n5\\n1 3 1 8 1\\n", "0\\n0\\n0\\n2\\n2\\n0\\n"); }
+    @Test void case44() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 0 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n5 5 1 3\\n5\\n4 1 1 4 2\\n", "2\\n1\\n1\\n0\\n1\\n2\\n"); }
+    @Test void case45() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 1 2\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 2 1 3\\n5\\n2 3 0 4 0\\n", "2\\n1\\n1\\n0\\n1\\n0\\n"); }
+    @Test void case46() { assertCase("6\\n4\\n3 7 4 10\\n3\\n1 2 1\\n3\\n3 1 2\\n4\\n-1 2 1 -2\\n4\\n7 5 1 3\\n5\\n2 3 0 4 2\\n", "1\\n0\\n1\\n1\\n1\\n1\\n"); }
+    @Test void case47() { assertCase("6\\n4\\n3 7 8 10\\n3\\n3 2 1\\n3\\n3 1 0\\n4\\n-1 2 1 -1\\n4\\n2 1 1 3\\n5\\n2 3 0 3 4\\n", "0\\n0\\n0\\n1\\n0\\n0\\n"); }
+    @Test void case48() { assertCase("6\\n4\\n3 7 5 7\\n3\\n3 2 0\\n3\\n1 1 2\\n4\\n-1 2 -1 -1\\n4\\n4 3 3 6\\n5\\n1 3 0 8 2\\n", "1\\n0\\n0\\n0\\n0\\n2\\n"); }
+    @Test void case49() { assertCase("6\\n4\\n5 1 3 7\\n3\\n3 3 0\\n3\\n1 1 2\\n4\\n-1 2 1 0\\n4\\n4 1 2 3\\n5\\n1 3 1 8 1\\n", "1\\n0\\n0\\n2\\n2\\n0\\n"); }
+    @Test void case50() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n0 5 2 3\\n5\\n1 3 2 1 2\\n", "2\\n0\\n1\\n0\\n2\\n2\\n"); }
+    @Test void case51() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 1\\n3\\n3 1 0\\n4\\n-1 2 2 -1\\n4\\n0 5 2 3\\n5\\n1 3 2 1 2\\n", "2\\n0\\n0\\n0\\n2\\n2\\n"); }
+    @Test void case52() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 1 2\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n2 2 1 3\\n5\\n2 3 0 5 0\\n", "2\\n1\\n1\\n0\\n0\\n0\\n"); }
+    @Test void case53() { assertCase("6\\n4\\n3 7 5 4\\n3\\n3 5 1\\n3\\n3 5 2\\n4\\n-1 2 1 -1\\n4\\n4 1 1 3\\n5\\n1 3 1 0 3\\n", "2\\n0\\n0\\n1\\n1\\n0\\n"); }
+    @Test void case54() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 0 1\\n3\\n3 1 2\\n4\\n-1 2 0 -1\\n4\\n6 5 1 3\\n5\\n4 1 1 0 2\\n", "2\\n1\\n1\\n1\\n1\\n1\\n"); }
+    @Test void case55() { assertCase("6\\n4\\n3 7 7 5\\n3\\n3 1 2\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n2 2 1 3\\n5\\n2 3 0 5 0\\n", "1\\n1\\n1\\n0\\n0\\n0\\n"); }
+    @Test void case56() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 1\\n3\\n6 1 0\\n4\\n-1 2 2 0\\n4\\n0 5 2 3\\n5\\n1 3 2 1 2\\n", "2\\n0\\n0\\n1\\n2\\n2\\n"); }
+    @Test void case57() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 0 1\\n3\\n6 1 0\\n4\\n-1 2 2 0\\n4\\n0 5 2 3\\n5\\n1 3 2 1 2\\n", "2\\n1\\n0\\n1\\n2\\n2\\n"); }
+    @Test void case58() { assertCase("6\\n4\\n3 7 8 15\\n3\\n3 2 1\\n3\\n3 0 0\\n4\\n-1 2 1 -1\\n4\\n2 1 1 3\\n5\\n2 4 -1 3 5\\n", "0\\n0\\n0\\n1\\n0\\n1\\n"); }
+    @Test void case59() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 0 1\\n3\\n6 1 0\\n4\\n-1 2 2 0\\n4\\n0 5 2 3\\n5\\n1 3 2 1 3\\n", "2\\n1\\n0\\n1\\n2\\n1\\n"); }
+    @Test void case60() { assertCase("6\\n4\\n3 7 8 15\\n3\\n3 2 1\\n3\\n3 0 0\\n4\\n-1 2 1 0\\n4\\n2 1 1 3\\n5\\n2 4 -1 3 5\\n", "0\\n0\\n0\\n2\\n0\\n1\\n"); }
+    @Test void case61() { assertCase("6\\n4\\n3 7 8 15\\n3\\n3 2 1\\n3\\n3 0 0\\n4\\n-1 2 1 0\\n4\\n2 1 1 3\\n5\\n2 4 -1 3 1\\n", "0\\n0\\n0\\n2\\n0\\n2\\n"); }
+    @Test void case62() { assertCase("6\\n4\\n2 11 5 0\\n3\\n5 5 1\\n3\\n3 5 2\\n4\\n-1 2 1 -1\\n4\\n4 0 1 3\\n5\\n1 3 1 0 5\\n", "1\\n0\\n0\\n1\\n2\\n0\\n"); }
+    @Test void case63() { assertCase("6\\n4\\n3 7 8 15\\n3\\n3 2 1\\n3\\n3 0 0\\n4\\n-1 2 1 0\\n4\\n4 1 1 3\\n5\\n2 4 -1 3 1\\n", "0\\n0\\n0\\n2\\n1\\n2\\n"); }
+    @Test void case64() { assertCase("6\\n4\\n2 11 8 0\\n3\\n10 2 1\\n3\\n3 5 2\\n4\\n1 2 1 -1\\n4\\n4 0 1 6\\n5\\n1 5 1 0 0\\n", "1\\n0\\n0\\n0\\n1\\n0\\n"); }
+    @Test void case65() { assertCase("6\\n4\\n2 11 8 -1\\n3\\n10 2 1\\n3\\n3 10 2\\n4\\n1 2 1 -1\\n4\\n4 0 1 6\\n5\\n1 5 1 -1 0\\n", "1\\n0\\n0\\n0\\n1\\n1\\n"); }
+    @Test void case66() { assertCase("6\\n4\\n2 11 8 -1\\n3\\n10 2 1\\n3\\n5 10 2\\n4\\n1 2 1 -1\\n4\\n1 0 1 6\\n5\\n1 5 1 -1 0\\n", "1\\n0\\n0\\n0\\n0\\n1\\n"); }
+    @Test void case67() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 1\\n3\\n1 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n1 3 1 3 2\\n", "2\\n0\\n0\\n0\\n1\\n2\\n"); }
+    @Test void case68() { assertCase("6\\n4\\n3 7 5 1\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n0 3 1 4 2\\n", "1\\n0\\n1\\n0\\n1\\n3\\n"); }
+    @Test void case69() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 0\\n3\\n3 1 2\\n4\\n-1 2 1 -1\\n4\\n4 3 1 4\\n5\\n2 3 0 4 2\\n", "2\\n0\\n1\\n1\\n0\\n1\\n"); }
+    @Test void case70() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n2 3 1 4 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case73() { assertCase("6\\n4\\n3 7 6 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n2 3 1 3 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case74() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case76() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 4 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 7 1 3\\n5\\n1 3 1 3 2\\n", "2\\n0\\n1\\n0\\n1\\n2\\n"); }
+    @Test void case78() { assertCase("6\\n4\\n3 7 6 5\\n3\\n6 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n2 3 1 3 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case79() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case82() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 0\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case83() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 0\\n3\\n6 1 2\\n4\\n-1 2 2 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case84() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 0\\n3\\n6 1 2\\n4\\n-1 2 3 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case89() { assertCase("6\\n4\\n3 7 8 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n2 3 0 4 2\\n", "1\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case91() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 5 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 7 1 3\\n5\\n1 3 1 3 2\\n", "2\\n0\\n1\\n0\\n1\\n2\\n"); }
+    @Test void case92() { assertCase("6\\n4\\n3 7 6 5\\n3\\n6 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n2 3 1 2 2\\n", "2\\n0\\n1\\n0\\n1\\n2\\n"); }
+    @Test void case93() { assertCase("6\\n4\\n3 13 5 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case95() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 0\\n3\\n6 1 2\\n4\\n-1 2 2 -1\\n4\\n8 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case96() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 0 0\\n3\\n6 1 2\\n4\\n-1 2 3 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case98() { assertCase("6\\n4\\n3 0 5 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -2\\n4\\n4 5 1 3\\n5\\n2 3 1 3 2\\n", "0\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case99() { assertCase("6\\n4\\n3 7 5 1\\n3\\n3 2 0\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n2 3 1 4 2\\n", "1\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case102() { assertCase("6\\n4\\n3 7 8 10\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n2 3 0 4 2\\n", "0\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case104() { assertCase("6\\n4\\n3 7 6 5\\n3\\n6 2 1\\n3\\n3 1 2\\n4\\n-1 2 3 -1\\n4\\n4 5 1 3\\n5\\n2 3 1 2 2\\n", "2\\n0\\n1\\n0\\n1\\n2\\n"); }
+    @Test void case106() { assertCase("6\\n4\\n3 7 5 4\\n3\\n3 2 0\\n3\\n6 1 2\\n4\\n-1 2 2 -1\\n4\\n8 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case108() { assertCase("6\\n4\\n3 7 5 1\\n3\\n3 2 0\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n3 3 1 4 2\\n", "1\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case111() { assertCase("6\\n4\\n3 7 6 5\\n3\\n6 2 1\\n3\\n3 1 2\\n4\\n-1 2 3 -1\\n4\\n7 5 1 3\\n5\\n2 3 1 2 2\\n", "2\\n0\\n1\\n0\\n1\\n2\\n"); }
+    @Test void case112() { assertCase("6\\n4\\n3 13 5 5\\n3\\n3 2 1\\n3\\n0 2 2\\n4\\n-1 2 2 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n0\\n0\\n1\\n1\\n"); }
+    @Test void case114() { assertCase("6\\n4\\n5 7 5 5\\n3\\n3 0 0\\n3\\n6 1 2\\n4\\n-1 2 3 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 0\\n", "0\\n0\\n1\\n0\\n1\\n0\\n"); }
+    @Test void case115() { assertCase("6\\n4\\n3 0 4 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -2\\n4\\n4 5 1 3\\n5\\n2 3 1 3 1\\n", "0\\n0\\n1\\n0\\n1\\n0\\n"); }
+    @Test void case117() { assertCase("6\\n4\\n3 7 8 10\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 1 -1\\n4\\n2 5 1 3\\n5\\n2 3 0 4 2\\n", "0\\n0\\n1\\n1\\n1\\n1\\n"); }
+    @Test void case119() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 5 1\\n3\\n2 2 2\\n4\\n-1 2 1 -1\\n4\\n4 7 1 3\\n5\\n1 3 1 3 2\\n", "2\\n0\\n0\\n1\\n1\\n2\\n"); }
+    @Test void case120() { assertCase("6\\n4\\n3 13 5 5\\n3\\n3 2 1\\n3\\n0 2 2\\n4\\n-1 2 0 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n0\\n1\\n1\\n1\\n"); }
+    @Test void case122() { assertCase("6\\n4\\n5 3 5 5\\n3\\n3 0 0\\n3\\n6 1 2\\n4\\n-1 2 3 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 0\\n", "0\\n0\\n1\\n0\\n1\\n0\\n"); }
+    @Test void case123() { assertCase("6\\n4\\n3 0 4 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n2 3 1 3 1\\n", "0\\n0\\n1\\n0\\n1\\n0\\n"); }
+    @Test void case126() { assertCase("6\\n4\\n3 13 5 4\\n3\\n3 2 1\\n3\\n0 2 2\\n4\\n-1 2 0 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n0\\n1\\n1\\n1\\n"); }
+    @Test void case128() { assertCase("6\\n4\\n3 7 5 7\\n3\\n3 2 0\\n3\\n1 1 2\\n4\\n-1 2 0 -1\\n4\\n4 3 1 3\\n5\\n1 3 0 4 2\\n", "1\\n0\\n0\\n1\\n1\\n2\\n"); }
+    @Test void case129() { assertCase("6\\n4\\n5 3 5 5\\n3\\n3 0 0\\n3\\n6 1 2\\n4\\n-1 2 3 -1\\n4\\n4 3 1 3\\n5\\n1 3 0 4 0\\n", "0\\n0\\n1\\n0\\n1\\n0\\n"); }
+    @Test void case131() { assertCase("6\\n4\\n3 13 5 4\\n3\\n3 2 1\\n3\\n0 2 0\\n4\\n-1 2 0 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n0\\n1\\n1\\n1\\n"); }
+    @Test void case133() { assertCase("6\\n4\\n3 7 5 7\\n3\\n3 2 0\\n3\\n1 1 2\\n4\\n-1 2 0 -1\\n4\\n4 3 2 3\\n5\\n1 3 0 4 2\\n", "1\\n0\\n0\\n1\\n1\\n2\\n"); }
+    @Test void case134() { assertCase("6\\n4\\n5 3 5 5\\n3\\n3 0 0\\n3\\n6 1 2\\n4\\n-1 2 3 -1\\n4\\n4 3 2 3\\n5\\n1 3 0 4 0\\n", "0\\n0\\n1\\n0\\n1\\n0\\n"); }
+    @Test void case136() { assertCase("6\\n4\\n3 7 8 1\\n3\\n3 2 1\\n3\\n3 1 0\\n4\\n-1 2 1 -1\\n4\\n2 5 1 3\\n5\\n2 3 0 2 2\\n", "0\\n0\\n0\\n1\\n1\\n2\\n"); }
+    @Test void case137() { assertCase("6\\n4\\n3 13 5 4\\n3\\n3 2 0\\n3\\n0 2 0\\n4\\n-1 2 0 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n0\\n1\\n1\\n1\\n"); }
+    @Test void case139() { assertCase("6\\n4\\n3 7 5 7\\n3\\n3 2 0\\n3\\n1 1 2\\n4\\n-1 2 0 -1\\n4\\n4 3 2 3\\n5\\n1 3 0 8 2\\n", "1\\n0\\n0\\n1\\n1\\n2\\n"); }
+    @Test void case140() { assertCase("6\\n4\\n5 3 5 5\\n3\\n3 0 0\\n3\\n6 1 2\\n4\\n-1 2 3 -1\\n4\\n4 4 2 3\\n5\\n1 3 0 4 0\\n", "0\\n0\\n1\\n0\\n1\\n0\\n"); }
+    @Test void case142() { assertCase("6\\n4\\n3 7 5 7\\n3\\n3 2 0\\n3\\n1 1 2\\n4\\n-1 2 1 -1\\n4\\n4 3 2 3\\n5\\n1 3 0 8 2\\n", "1\\n0\\n0\\n1\\n1\\n2\\n"); }
+    @Test void case143() { assertCase("6\\n4\\n7 3 5 5\\n3\\n3 0 0\\n3\\n6 1 2\\n4\\n-1 2 3 -1\\n4\\n4 4 2 3\\n5\\n1 3 0 4 0\\n", "2\\n0\\n1\\n0\\n1\\n0\\n"); }
+    @Test void case144() { assertCase("6\\n4\\n3 7 8 1\\n3\\n3 2 1\\n3\\n3 1 0\\n4\\n-1 2 1 -1\\n4\\n0 5 0 3\\n5\\n2 3 0 2 2\\n", "0\\n0\\n0\\n1\\n1\\n2\\n"); }
+    @Test void case146() { assertCase("6\\n4\\n3 7 8 1\\n3\\n3 2 1\\n3\\n3 1 0\\n4\\n-1 2 1 -2\\n4\\n0 5 0 3\\n5\\n2 3 0 2 2\\n", "0\\n0\\n0\\n1\\n1\\n2\\n"); }
+    @Test void case148() { assertCase("6\\n4\\n3 7 8 1\\n3\\n3 2 1\\n3\\n3 1 0\\n4\\n-1 2 1 -2\\n4\\n0 5 1 3\\n5\\n2 3 0 2 2\\n", "0\\n0\\n0\\n1\\n2\\n2\\n"); }
+    @Test void case151() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n1 3 1 1 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case153() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 1 2 -1\\n4\\n4 5 1 3\\n5\\n2 3 1 3 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case154() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n5 5 1 3\\n5\\n2 3 1 4 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case157() { assertCase("6\\n4\\n3 7 6 5\\n3\\n3 2 1\\n3\\n3 2 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n2 3 1 3 2\\n", "2\\n0\\n0\\n0\\n1\\n1\\n"); }
+    @Test void case158() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 2 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case160() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 4 1\\n3\\n3 1 2\\n4\\n-1 2 2 -2\\n4\\n4 7 1 3\\n5\\n1 3 1 3 2\\n", "2\\n0\\n1\\n0\\n1\\n2\\n"); }
+    @Test void case162() { assertCase("6\\n4\\n3 7 5 5\\n3\\n6 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case165() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 0\\n3\\n6 1 2\\n4\\n-1 2 2 -1\\n4\\n4 3 1 3\\n5\\n2 3 -1 4 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case166() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 2 0\\n3\\n6 1 2\\n4\\n-2 2 3 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n1\\n1\\n1\\n1\\n"); }
+    @Test void case168() { assertCase("6\\n4\\n3 0 5 5\\n3\\n3 3 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n2 3 1 3 2\\n", "0\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case169() { assertCase("6\\n4\\n3 7 5 1\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n6 5 1 3\\n5\\n2 3 1 4 2\\n", "1\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case173() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 5 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 14 1 3\\n5\\n1 3 1 3 2\\n", "2\\n0\\n1\\n0\\n1\\n2\\n"); }
+    @Test void case174() { assertCase("6\\n4\\n3 7 1 5\\n3\\n3 0 0\\n3\\n6 1 2\\n4\\n-1 2 3 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "1\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case176() { assertCase("6\\n4\\n3 0 5 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 4 -2\\n4\\n4 5 1 3\\n5\\n2 3 1 3 2\\n", "0\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case177() { assertCase("6\\n4\\n6 7 5 1\\n3\\n3 2 0\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n2 3 1 4 2\\n", "0\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case178() { assertCase("6\\n4\\n3 7 8 10\\n3\\n3 1 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n2 3 0 4 2\\n", "0\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case180() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 5 1\\n3\\n3 1 2\\n4\\n-1 2 1 -1\\n4\\n4 5 1 3\\n5\\n1 3 1 3 2\\n", "2\\n0\\n1\\n1\\n1\\n2\\n"); }
+    @Test void case181() { assertCase("6\\n4\\n3 7 6 5\\n3\\n6 2 1\\n3\\n3 1 2\\n4\\n0 2 3 -1\\n4\\n4 5 1 3\\n5\\n2 3 1 2 2\\n", "2\\n0\\n1\\n0\\n1\\n2\\n"); }
+    @Test void case182() { assertCase("6\\n4\\n3 13 5 5\\n3\\n3 2 1\\n3\\n0 2 2\\n4\\n-1 2 2 -1\\n4\\n4 3 1 3\\n5\\n2 3 -1 4 2\\n", "2\\n0\\n0\\n0\\n1\\n1\\n"); }
+    @Test void case184() { assertCase("6\\n4\\n3 7 4 5\\n3\\n3 2 0\\n3\\n1 1 2\\n4\\n-1 2 1 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n0\\n1\\n1\\n1\\n"); }
+    @Test void case185() { assertCase("6\\n4\\n3 7 5 4\\n3\\n3 2 0\\n3\\n10 1 2\\n4\\n-1 2 2 -1\\n4\\n8 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case187() { assertCase("6\\n4\\n3 8 5 1\\n3\\n3 2 0\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 3\\n5\\n3 3 1 4 2\\n", "1\\n0\\n1\\n0\\n1\\n1\\n"); }
+    @Test void case189() { assertCase("6\\n4\\n3 7 8 10\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 1 -1\\n4\\n7 5 1 3\\n5\\n2 3 0 4 2\\n", "0\\n0\\n1\\n1\\n1\\n1\\n"); }
+    @Test void case191() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 5 1\\n3\\n3 3 2\\n4\\n-1 2 1 -1\\n4\\n4 7 1 3\\n5\\n1 3 1 3 2\\n", "2\\n0\\n0\\n1\\n1\\n2\\n"); }
+    @Test void case192() { assertCase("6\\n4\\n3 13 5 5\\n3\\n3 2 1\\n3\\n0 2 2\\n4\\n-1 0 2 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "2\\n0\\n0\\n0\\n1\\n1\\n"); }
+    @Test void case194() { assertCase("6\\n4\\n2 7 5 7\\n3\\n3 2 0\\n3\\n1 1 2\\n4\\n-1 2 1 -1\\n4\\n4 3 1 3\\n5\\n2 3 0 4 2\\n", "1\\n0\\n0\\n1\\n1\\n1\\n"); }
+    @Test void case197() { assertCase("6\\n4\\n3 7 5 5\\n3\\n3 5 1\\n3\\n2 2 2\\n4\\n-1 2 1 -1\\n4\\n4 7 2 3\\n5\\n1 3 1 3 2\\n", "2\\n0\\n0\\n1\\n1\\n2\\n"); }
+    @Test void case199() { assertCase("6\\n4\\n3 0 4 5\\n3\\n3 2 1\\n3\\n3 1 2\\n4\\n-1 2 2 -1\\n4\\n4 5 1 2\\n5\\n2 3 1 3 1\\n", "0\\n0\\n1\\n0\\n1\\n0\\n"); }
+    @Test void case201() { assertCase("6\\n4\\n3 7 8 10\\n3\\n3 2 1\\n3\\n3 1 0\\n4\\n-1 2 1 -1\\n4\\n2 5 1 3\\n5\\n2 3 0 4 4\\n", "0\\n0\\n0\\n1\\n1\\n0\\n"); }
+}
+""",
+    },
     {
         # ──────────────────────────────────────────────────────────────────────
         # Problem: Relay Window Shift Planning

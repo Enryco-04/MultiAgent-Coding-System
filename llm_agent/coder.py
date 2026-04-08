@@ -9,6 +9,17 @@ import re
 
 
 class CoderAgent:
+    SYSTEM_PROMPT = (
+        "You are a Java coding agent.\n"
+        "Non-negotiable rules:\n"
+        "- Return only valid JSON matching the provided schema.\n"
+        "- The java_code field must contain a complete compilable Java file.\n"
+        "- Never add package declarations.\n"
+        "- Preserve the required class name and method signature exactly.\n"
+        "- On retries, apply minimal local edits only.\n"
+        "- Do not regress passed tests."
+    )
+
     CODE_JSON_SCHEMA = {
         "name": "java_solution",
         "strict": True,
@@ -44,26 +55,20 @@ class CoderAgent:
         if clean_prev and clean_hints:
             retry_block = (
                 f"\nYour previous attempt failed:\n{clean_prev}\n\n"
-                "Use this diagnosis from the analyzer to repair the code.\n"
-                "Treat TARGETED_CHANGES as instructions, not optional suggestions.\n"
-                "Pay special attention to FAILED_TESTS, ROOT_CAUSE, and TARGETED_CHANGES.\n\n"
+                "Repair using analyzer diagnosis below.\n"
+                "Treat TARGETED_CHANGES as required.\n"
+                "Treat CHECK_AFTER_FIX as acceptance criteria.\n\n"
                 f"{clean_hints}\n\n"
-                "Important repair policy:\n"
-                "- Keep the existing solution structure unless the diagnosis proves it is fundamentally wrong.\n"
-                "- Make the smallest set of code changes needed to fix the diagnosed bug.\n"
-                "- Do not rewrite working parts just to make the code look different.\n"
-                "- Preserve behavior that likely already passes tests.\n"
-                "- If only one formula, bound, condition, or data type is wrong, change only that part.\n\n"
-                "If TARGETED_CHANGES says to replace a formula, bound, condition, or data type, apply that change directly.\n"
-                "Do not ignore TARGETED_CHANGES unless they clearly contradict the failing tests.\n\n"
-                "Fix the implementation so the diagnosis is addressed directly."
+                "Patch policy:\n"
+                "- Keep working logic unchanged.\n"
+                "- Edit only what is needed for failing tests/issues.\n"
+                "- Avoid rewrites and avoid new helpers unless necessary."
             )
         elif clean_prev:
             retry_block = (
                 f"\nYour previous attempt failed:\n{clean_prev}\n\n"
-                "Repair it with minimal changes.\n"
-                "Preserve working logic and avoid rewriting the whole solution unless necessary.\n"
-                "Change only the smallest number of lines needed to fix the bug."
+                "Repair with minimal changes only.\n"
+                "Preserve working logic and avoid full rewrites."
             )
         else:
             retry_block = ""
@@ -83,8 +88,8 @@ Rules for java_code:
 IMPORTANT: Read the description carefully. Do NOT assume this is a problem
 you have seen before — the framing and constraints may differ from similar problems.
 
-When retrying after a failed attempt, prefer a minimal targeted patch over a full rewrite.
-Do not replace a mostly-correct solution with a completely different approach unless the prior approach is fundamentally incompatible with the problem.
+When retrying, prefer a minimal patch over a rewrite.
+Do not break behavior that likely already passes tests.
 
 Problem description:
 {desc_block}
@@ -94,10 +99,12 @@ Method signature to implement:
 {retry_block}
 """
 
+        temperature = 0.4 if not clean_prev else 0.25
         response = self.llm.generate_response(
             prompt,
-            temperature=0.8,
+            temperature=temperature,
             json_schema=self.CODE_JSON_SCHEMA,
+            system_prompt=self.SYSTEM_PROMPT,
         )
         code = self._extract_code_from_json(response)
         code = self._strip_package(code)
