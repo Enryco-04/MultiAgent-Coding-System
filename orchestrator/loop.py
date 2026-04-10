@@ -6,10 +6,9 @@ Evaluation loop for a single problem.
 Flow per attempt:
   compile fail → analyzer(code, errors)          → hints → coder
   junit fail   → analyzer(code, failures+values) → hints → coder
-  junit pass   → sonar scan (optional)
+  junit pass   → sonar scan 
   sonar fail   → analyzer(code, metrics, issues) → hints → coder
 
-No truncation, no sanitisation — hints flow verbatim between agents.
 """
 
 from llm_agent.coder            import CoderAgent
@@ -28,11 +27,14 @@ SONAR_MAX_COMPLEXITY  = 15
 
 class EvaluationLoop:
     def __init__(self, coder, analyzer, workspace, runner, sonar=None):
+        # The loop orchestrates the collaboration:
+        # coder produces code, analyzer produces repair hints, runner validates.
         self.coder     = coder
         self.analyzer  = analyzer
         self.workspace = workspace
         self.runner    = runner
         self.sonar     = sonar
+        # Per-process nonce used to isolate Sonar projects across different runs.
         self._run_nonce = uuid.uuid4().hex[:8]
 
     def run(self, problem: dict) -> dict:
@@ -47,17 +49,23 @@ class EvaluationLoop:
         print(f"  Problem: {title}  ({pid})")
         print(f"{'─'*60}")
 
+        # `hints`: analyzer feedback passed to coder at next attempt.
         hints       = None
+        # `last_code`: most recent generated source for current problem.
         last_code   = None
+        # `best_result`: best JUnit outcome seen so far (by passed tests).
         best_result = None
         best_iter   = 1
         final_sonar_metrics = {}
         final_sonar_issues  = []
         stall_count = 0
+        # Full per-attempt trace persisted into results.json for later analysis.
         attempt_history = []
 
+        #Loop entry point
         for attempt in range(1, MAX_ITER + 1):
             print(f"\n  ── Attempt {attempt}/{MAX_ITER} ──")
+            # Attempt-local record (later appended to attempt_history).
             attempt_entry = {
                 "iteration": attempt,
                 "status": "",
@@ -76,6 +84,7 @@ class EvaluationLoop:
                 )
             except ValueError as exc:
                 print(f"  [coder] format error: {exc}")
+                # If we get formatting errors, we ask for strict JSON again.
                 hints = (
                     f"Your response format was wrong: {exc}. "
                     "Return strict JSON with a single field: java_code."
@@ -90,8 +99,8 @@ class EvaluationLoop:
                 stall_count += 1
                 
                 print(f"  [loop] stall ({stall_count})")
-
-                #TODO, what to do if stalling
+                # NOTE: stalling means the model repeated almost identical code.
+                # This is legacy as it does not happen with longer solutions, but still needed
 
 
             else:
@@ -121,10 +130,12 @@ class EvaluationLoop:
                 print(f"  [junit] COMPILE FAILED")
                 print(f"  {result['compile_errors'][:400]}")
                 if attempt < MAX_ITER:
+                    # Generate actionable guidance only if another retry exists.
                     hints = self.analyzer.analyze_compile_errors(
                         last_code, result["compile_errors"]
                     )
                 else:
+                    # Last attempt: skip analyzer to avoid unnecessary token usage.
                     hints = None
                 attempt_entry["status"] = "COMPILE_FAILED"
                 attempt_entry["analyzer_hints"] = hints
@@ -149,8 +160,10 @@ class EvaluationLoop:
 
             if not result["success"]:
                 if attempt < MAX_ITER:
+                    # Generate test-failure diagnosis only if we can still retry.
                     hints = self.analyzer.analyze_test_failures(last_code, failures)
                 else:
+                    # Last attempt: skip analyzer to avoid unnecessary token usage.
                     hints = None
                 attempt_entry["status"] = "TESTS_FAILED"
                 attempt_entry["analyzer_hints"] = hints
@@ -163,10 +176,13 @@ class EvaluationLoop:
             best_iter   = attempt
 
             if not self.sonar:
+                # Sonar is optional: if disabled, green JUnit is enough to stop.
                 attempt_entry["status"] = "PASS"
                 attempt_history.append(attempt_entry)
                 break
 
+            # Sonar project key is unique per (problem, attempt, run),
+            # so metrics/issues refer to this exact iteration only.
             sonar_component = self._build_sonar_component(pid, attempt)
             print(f"  [DEBUG][sonar] component_key={sonar_component}")
             sonar_metrics, sonar_issues = self._run_sonar(attempt, sonar_component)
@@ -186,9 +202,11 @@ class EvaluationLoop:
                 attempt_history.append(attempt_entry)
                 break
 
+            # Sonar failed: keep this attempt and (if possible) prepare hints.
             print(f"  [sonar] quality not met: {quality_reason}")
             attempt_entry["status"] = "SONAR_FAILED"
             if attempt < MAX_ITER:
+                # Focus analyzer on the specific metric that violated the threshold.
                 failed_metric = self._failed_metric_from_reason(quality_reason)
                 filtered_issues = sonar_issues
                 print(
@@ -197,6 +215,7 @@ class EvaluationLoop:
                 )
                 if failed_metric:
                     try:
+                        # Pull metric-specific issues (e.g., BUG / CODE_SMELL).
                         filtered_issues = self.sonar.get_issues_for_metric(
                             failed_metric,
                             component=sonar_component,
@@ -222,6 +241,7 @@ class EvaluationLoop:
                     f"  [DEBUG][sonar] analyzer_payload "
                     f"issues_count={len(filtered_issues)} preview={preview}"
                 )
+                # Analyzer receives code + metrics + focused issues.
                 hints = self.analyzer.analyze_sonar(last_code, sonar_metrics, filtered_issues)
                 print(f"  [analyzer] sonar hints generated")
                 attempt_entry["analyzer_hints"] = hints
@@ -246,6 +266,7 @@ class EvaluationLoop:
         }
 
     def _run_sonar(self, iteration: int, component: str) -> tuple[dict, list]:
+        # Run scanner and read metrics/issues for a specific component key.
         iter_path = self.workspace.iteration_path(iteration)
         try:
             self.sonar.scan(iter_path, iteration, project_key=component)
@@ -253,6 +274,7 @@ class EvaluationLoop:
             issues  = self.sonar.get_issues(
                 component=component,
                 in_new_code_period=False,
+                # Retry because Sonar issues may appear a few seconds after metrics.
                 retries=8,
                 retry_delay=2,
                 retry_on_empty=True,
@@ -265,6 +287,7 @@ class EvaluationLoop:
             return {}, []
 
     def _build_sonar_component(self, problem_id: str, iteration: int) -> str:
+        # Compose a Sonar key safe for API usage and unique for this iteration.
         if not self.sonar:
             return ""
         base = self.sonar.project_key
@@ -273,6 +296,7 @@ class EvaluationLoop:
 
     @staticmethod
     def _quality_ok(metrics: dict) -> tuple[bool, str]:
+        # Quality gate used by the loop.
         bugs       = int(metrics.get("bugs",        0))
         smells     = int(metrics.get("code_smells", 0))
         complexity = int(metrics.get("complexity",  0))

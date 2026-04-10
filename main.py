@@ -33,6 +33,13 @@ from problems.problem_bank        import PROBLEMS, get_problem
 
 
 def _format_detailed_results(results: list[dict]) -> list[dict]:
+    """
+    Convert raw loop output into a compact, analysis-friendly JSON shape.
+
+    Output per problem:
+      - problem_id
+      - attempts: passrate, failed tests, sonar metrics
+    """
     detailed = []
     for r in results:
         iterations = []
@@ -59,6 +66,10 @@ def _format_detailed_results(results: list[dict]) -> list[dict]:
 
 
 def build_components():
+    """
+    Build and wire all runtime components (LLM agents, workspace, runner, Sonar).
+
+    """
     llm = CodexClient(model="gpt-5-nano")
 
     coder    = CoderAgent(llm)
@@ -78,12 +89,15 @@ def build_components():
 
 
 def main():
+    """CLI entrypoint: run selected problems and dump compact results.json."""
     loop = build_components()
 
     # Which problems to run
     if len(sys.argv) > 1:
+        # Run only requested ids: python main.py <id1> <id2> ...
         problems = [get_problem(pid) for pid in sys.argv[1:]]
     else:
+        # Default mode: evaluate the full problem bank.
         problems = PROBLEMS
 
     results = []
@@ -103,7 +117,7 @@ def main():
         print(f"{icon}  [{r['status']:4}]  {r['title']:<35}  {p}/{t} tests  (attempt {r['attempts']})")
 
     # Save full results — strip ANSI escape codes from raw_output so the
-    # JSON is human-readable and doesn't break some parsers.
+    # JSON is human-readable 
     ansi_escape = re.compile(r'\x1b\[[0-9;]*m')
 
     def _clean(obj):

@@ -31,6 +31,7 @@ METRIC_KEYS = [
 
 class SonarService:
     def __init__(self, token: str, project_key: str, host: str = "http://localhost:9000"):
+        # `project_key` acts as a base key; loop may override per attempt.
         self.token       = token
         self.project_key = project_key
         self.host        = host
@@ -40,9 +41,7 @@ class SonarService:
 
     def scan(self, source_folder: str, iteration: int, project_key: str | None = None) -> None:
         """
-        Run sonar-scanner-cli as a Docker container — same approach as the
-        original working code.  host.docker.internal resolves to the host
-        machine on Windows Docker Desktop, reaching SonarQube at port 9000.
+        Run sonar-scanner-cli as a Docker container, reaching SonarQube at port 9000.
         """
         abs_folder = os.path.abspath(source_folder)
         effective_project_key = project_key or self.project_key
@@ -64,6 +63,7 @@ class SonarService:
             "-Dsonar.scm.disabled=true",
             "-Dsonar.exclusions=**/*Test.java",
             "-Dsonar.issue.ignore.multicriteria=e1",
+            # this particular rule is not needed, it's about package naming but it is irrelevant in our project and it interferies
             "-Dsonar.issue.ignore.multicriteria.e1.ruleKey=java:S1220",
             "-Dsonar.issue.ignore.multicriteria.e1.resourceKey=**/*.java",
         ]
@@ -87,7 +87,7 @@ class SonarService:
     ) -> None:
         """
         Poll /api/ce/component until the background task reports SUCCESS.
-        More reliable than a fixed sleep — proceeds as soon as data is ready.
+        proceeds as soon as data is ready, to make sure that the scan is really complete.
         """
         url     = f"{self.api}/ce/component"
         component_key = component or self.project_key
@@ -119,9 +119,8 @@ class SonarService:
         poll_interval: int = 1,
     ) -> None:
         """
-        After CE reports SUCCESS, SonarQube may still need a brief moment before
-        measures are queryable with the latest values. Poll the measures API
-        instead of relying on a fixed sleep.
+        After CE reports SUCCESS, sometimes SonarQube may still need a brief moment before
+        measures are queryable with the latest values. 
         """
         elapsed = 0
         while elapsed < timeout:
@@ -140,6 +139,7 @@ class SonarService:
     # ── Metrics ───────────────────────────────────────────────────────────────
 
     def get_metrics(self, component: str | None = None, retries: int = 3, retry_delay: int = 1) -> dict:
+        """Fetch Sonar measures for one component, with retry for eventual consistency."""
         component = component or self.project_key
         url    = f"{self.api}/measures/component"
         params = {"component": component, "metricKeys": ",".join(METRIC_KEYS)}
@@ -175,6 +175,12 @@ class SonarService:
         retry_delay: int = 1,
         retry_on_empty: bool = False,
     ) -> list:
+        """
+        Fetch Sonar issues with optional filters (type/tags/new-code).
+
+        `retry_on_empty=True` is useful right after scan completion when issues
+        index may lag a few seconds behind metrics.
+        """
         component = component or self.project_key
         url    = f"{self.api}/issues/search"
         params = {
@@ -219,6 +225,7 @@ class SonarService:
         component: str | None = None,
         in_new_code_period: bool = True,
     ) -> list:
+        """Convenience wrapper: return issues most relevant to one failed metric by filtering for issue type and keywords."""
         metric_name = (metric or "").strip().lower()
         print(
             f"  [DEBUG][sonar] get_issues_for_metric metric={metric_name} "

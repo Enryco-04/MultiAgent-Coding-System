@@ -571,8 +571,8 @@ class TreeQueriesTest {
         assertArrayEquals(expected, TreeQueries.treeQueries(n, edges, queries));
     }
 
-    @Test void officialExampleVariantA() {
-        // Same tree, query 4 uses k=0 (v=7) → all ancestors pull in, expect 5
+    @Test void officialExampleKZeroForV7() {
+        // Same edges; query on v=7 with k=0 allows pulling all ancestors in
         int n = 8;
         int[][] edges = {{6,7},{3,2},{8,3},{5,7},{7,4},{7,1},{7,3}};
         int[][] queries = {{1,0},{1,2},{1,3},{7,0},{5,1},{7,200000}};
@@ -580,8 +580,8 @@ class TreeQueriesTest {
         assertArrayEquals(expected, TreeQueries.treeQueries(n, edges, queries));
     }
 
-    @Test void officialExampleVariantB() {
-        // Edge 8-3 replaced with 8-2; restructures the subtree
+    @Test void officialExampleEdge83ReplacedWith82() {
+        // Edge between 8 and 3 replaced with edge between 8 and 2
         int n = 8;
         int[][] edges = {{6,7},{3,2},{8,2},{5,7},{7,4},{7,1},{7,3}};
         int[][] queries = {{1,0},{1,2},{1,6},{7,0},{5,1},{7,200000}};
@@ -627,9 +627,7 @@ class TreeQueriesTest {
 
     @Test void deepPathVaryingK() {
         // Path: 1-2-3-4-5  (each non-root node has 1 child except leaf)
-        // Query v=5, k=0: delete 2,3,4 (3 deletions), c(5)=0 still (5 has no children)
-        // Query v=3, k=0: delete 2 → c(3) gains children(2)-1 = 0 gained (2 had 1 child=3, so 0 new)
-        // Actually v=3, k=0: ancestor=2 (d=1), gain=children(2)-1-1*0=0; ancestor=1 (d=2), gain=children(1)-1-2*0=0
+        // Query v=3, k=0: ancestor=2 (d=1), gain=children(2)-1-1*0=0; ancestor=1 (d=2), gain=children(1)-1-2*0=0
         // Baseline c(3) = 1 (only child is 4). Best = 1.
         int n = 5;
         int[][] edges = {{1,2},{2,3},{3,4},{4,5}};
@@ -688,31 +686,34 @@ class TreeQueriesTest {
     },
     {
         # ──────────────────────────────────────────────────────────────────────
-        # Problem: 1600_E. Array Game (manual I/O conversion)
-        # Source  : hard_problems_with_testsFromCodeForces.jsonl
+        # Problem: Deque End-Pick Game
         # ──────────────────────────────────────────────────────────────────────
         "id": "array_game_io",
-        "title": "Deque Race: Increasing Sequence Duel",
+        "title": "Deque End-Pick Game",
         "class_name": "ArrayGameIO",
 
         "signature": "public static String solve(String input)",
 
         "description": """\
-Versione leggermente riformulata:
+Alice and Bob play a game on an array of N integers.
+They take turns, with Alice going first. On each turn the current player
+must pick exactly one value from either the left end or the right end of
+the remaining array. The picked value is removed from the array.
 
-Due giocatori (Alice e Bob) hanno un array di lunghezza `N`.
-Costruiscono a turno una sequenza prendendo, a ogni mossa, un numero
-solo da sinistra o da destra dell'array rimanente.
+The sequence of all values picked so far (across both players, in order)
+must remain strictly increasing after every pick. A player who cannot make
+a valid move loses; the other player wins.
 
-La sequenza costruita deve restare strettamente crescente.
-Chi effettua l'ultima mossa valida vince.
-Alice gioca per prima.
+Both players play optimally. Determine who wins.
 
-Dato l'input completo del problema, restituisci in output solo il nome
-del vincitore (`Alice` oppure `Bob`) seguito da newline.
+Input format:
+  Line 1: N
+  Line 2: N space-separated integers
 
-Implementa quindi un parser completo in `solve(String input)` e produci
-esattamente il formato atteso.
+Output format:
+  One line: "Alice" or "Bob"
+
+Implement full parsing and output formatting in `solve(String input)`.
 """,
 
         "junit_test": """\
@@ -770,16 +771,14 @@ class ArrayGameIOTest {
         "signature": "public static String solve(String input)",
 
         "description": """\
-Versione riformulata in modo leggero:
+Maintain a sequence that starts empty and supports two query types:
+1) `1 x`: append `x` to the end of the sequence.
+2) `2 x y`: replace every current occurrence of `x` with `y`.
 
-Gestisci una sequenza inizialmente vuota con due operazioni:
-1) `1 x`: appendi `x` in coda.
-2) `2 x y`: sostituisci tutte le occorrenze correnti di `x` con `y`.
+After processing all queries, print the final sequence.
 
-Dopo tutte le query, stampa la sequenza finale.
-
-Implementa parsing e output completi in `solve(String input)`.
-Il formato di output deve essere identico a quello del problema originale.
+Implement full input parsing and output formatting in `solve(String input)`.
+The output format must match the original problem exactly.
 """,
 
         "junit_test": """\
@@ -830,15 +829,23 @@ class ReplaceNumbersIOTest {
         "signature": "public static String solve(String input)",
 
         "description": """\
-Riformulazione leggera:
+Given a grid containing walls '#', empty cells '.', and exactly one robot
+start cell 'L', determine every cell the robot can eventually reach.
 
-Data una griglia con muri `#`, celle libere `.`, e una posizione speciale `L`,
-devi espandere le celle raggiungibili convertendo alcune `.` in `+` secondo
-le regole del problema originale (versione Codeforces 1613E).
+Reachability rule: a non-wall cell becomes reachable if and only if
+  (a) it is adjacent (4-directional) to an already-reachable cell, AND
+  (b) among all of its non-wall neighbours, at most 1 is not yet reachable.
 
-L'input può contenere più casi di test.
-Restituisci la griglia trasformata per ogni caso, rispettando esattamente
-il formato di output.
+The robot's start cell 'L' is always reachable. Apply the rule repeatedly
+(in any order) until no more cells can be added.
+
+Output the grid with every newly reachable '.' replaced by '+'.
+The 'L' cell and all '#' cells are printed unchanged.
+
+The input may contain multiple test cases, each preceded by a line giving
+the grid dimensions (rows and columns).
+
+Implement full input parsing and output formatting in `solve(String input)`.
 """,
 
         "junit_test": """\

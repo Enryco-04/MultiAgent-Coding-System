@@ -21,33 +21,40 @@ import re
 
 class WorkspaceManager:
     def __init__(self, base_dir: str = "workspace"):
+        # Host-side workspace mirrored into the tester container.
         self.base_dir = base_dir
         self.problem_id = None
         os.makedirs(self.base_dir, exist_ok=True)
 
     def set_problem(self, problem_id: str) -> None:
+        """Set current problem context and ensure its root folder exists."""
         self.problem_id = problem_id
         os.makedirs(self.problem_root(), exist_ok=True)
 
     def problem_root(self) -> str:
+        """Absolute path of current problem workspace root."""
         if not self.problem_id:
             raise ValueError("Workspace problem_id is not set.")
         return os.path.join(self.base_dir, self.problem_id)
 
     def iteration_relpath(self, iteration: int) -> str:
+        """Container-friendly relative path used by run_tests.sh."""
         if not self.problem_id:
             raise ValueError("Workspace problem_id is not set.")
         return f"{self.problem_id}/iteration_{iteration}"
 
     def iteration_path(self, iteration: int) -> str:
+        """Host absolute path for one iteration folder."""
         return os.path.join(self.base_dir, self.iteration_relpath(iteration))
 
     def create_iteration_folder(self, iteration: int) -> str:
+        """Create iteration folder if missing and return its path."""
         path = self.iteration_path(iteration)
         os.makedirs(path, exist_ok=True)
         return path
 
     def write_java(self, code: str, class_name: str, iteration: int) -> str:
+        """Write one Java source file into the selected iteration directory."""
         folder = self.create_iteration_folder(iteration)
         path   = os.path.join(folder, f"{class_name}.java")
         with open(path, "w", encoding="utf-8") as f:
@@ -56,6 +63,7 @@ class WorkspaceManager:
         return path
 
     def read_result(self, iteration: int) -> dict | None:
+        """Read compile/JUnit artifacts produced by the docker test runner."""
         folder          = self.iteration_path(iteration)
         compile_ok_path = os.path.join(folder, "compile_ok.txt")
         if not os.path.isfile(compile_ok_path):
@@ -91,6 +99,7 @@ class WorkspaceManager:
         }
 
     def clear_result(self, iteration: int) -> None:
+        """Delete runner output files for one iteration (if present)."""
         folder = self.iteration_path(iteration)
         for name in ("compile_ok.txt", "compile_out.txt", "junit_out.txt"):
             path = os.path.join(folder, name)

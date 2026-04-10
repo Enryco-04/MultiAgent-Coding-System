@@ -9,6 +9,7 @@ import re
 
 
 class CoderAgent:
+    # Stable behavioral policy (high level). Dynamic task details stay in user prompt.
     SYSTEM_PROMPT = (
         "You are a Java coding agent.\n"
         "Non-negotiable rules:\n"
@@ -42,19 +43,24 @@ class CoderAgent:
         hints:         str | None = None,
         previous_code: str | None = None,
     ) -> dict:
+        """
+        Produce one Java candidate for the current problem attempt.
+
+        On retries, feed previous code + analyzer hints to request a minimal patch.
+        Returns dict: {"filename": <class_name>, "code": <java_source>}.
+        """
         class_name  = problem["class_name"]
         description = problem["description"]
         signature   = problem["signature"]
 
-        clean_prev = self._clean(previous_code) if previous_code else None
-        clean_hints = self._compact_hints(hints) if hints else None
+        cleaned_previous_code = self._clean(previous_code) if previous_code else None
+        clean_hints = self._clean(hints) if hints else None
 
-        # On retries, keep the objective visible but reduce prompt bloat.
-        desc_block = description if not clean_prev else self._condense_description(description)
+        desc_block = description
 
-        if clean_prev and clean_hints:
+        if cleaned_previous_code and clean_hints:
             retry_block = (
-                f"\nYour previous attempt failed:\n{clean_prev}\n\n"
+                f"\nYour previous attempt failed:\n{cleaned_previous_code}\n\n"
                 "Repair using analyzer diagnosis below.\n"
                 "Treat TARGETED_CHANGES as required.\n"
                 "Treat CHECK_AFTER_FIX as acceptance criteria.\n\n"
@@ -64,9 +70,9 @@ class CoderAgent:
                 "- Edit only what is needed for failing tests/issues.\n"
                 "- Avoid rewrites and avoid new helpers unless necessary."
             )
-        elif clean_prev:
+        elif cleaned_previous_code:
             retry_block = (
-                f"\nYour previous attempt failed:\n{clean_prev}\n\n"
+                f"\nYour previous attempt failed:\n{cleaned_previous_code}\n\n"
                 "Repair with minimal changes only.\n"
                 "Preserve working logic and avoid full rewrites."
             )
@@ -98,8 +104,8 @@ Method signature to implement:
 {signature}
 {retry_block}
 """
-
-        temperature = 0.4 if not clean_prev else 0.25
+        # note: codex client does not support temperature, this is for retrocompatibility with OllamaClient.
+        temperature = 0.4 if not cleaned_previous_code else 0.25
         response = self.llm.generate_response(
             prompt,
             temperature=temperature,
@@ -112,6 +118,7 @@ Method signature to implement:
 
     @staticmethod
     def _extract_code_from_json(text: str) -> str:
+        """Parse strict JSON model output and extract java_code field."""
         try:
             payload = json.loads(text)
         except json.JSONDecodeError as exc:
@@ -126,44 +133,16 @@ Method signature to implement:
 
     @staticmethod
     def _strip_package(code: str) -> str:
+        """Defensive cleanup: remove package lines (tests expect default package)."""
         return "\n".join(
             line for line in code.splitlines()
             if not (line.strip().startswith("package ") and line.strip().endswith(";"))
         )
 
     @staticmethod
+
     def _clean(text: str) -> str:
+        """This method is needed because ''' java markdowns in response"""
         text = re.sub(r'```(?:java)?\s*', '', text)
         text = re.sub(r'```', '', text)
         return text.strip()
-
-    @staticmethod
-    def _condense_description(description: str, max_lines: int = 24) -> str:
-        lines = [line.rstrip() for line in description.splitlines()]
-        non_empty = [line for line in lines if line.strip()]
-        if len(non_empty) <= max_lines:
-            return description
-        head = "\n".join(non_empty[:max_lines]).strip()
-        return (
-            head
-            + "\n...\n"
-            + "Keep the same objective/constraints as above; only repair the implementation bug."
-        )
-
-    @staticmethod
-    def _compact_hints(hints: str, max_chars: int = 1600) -> str:
-        clean = CoderAgent._clean(hints)
-        if len(clean) <= max_chars:
-            return clean
-        # Prefer keeping structured diagnosis headers if present.
-        parts = []
-        for name in ("FAILED_TESTS", "ROOT_CAUSE", "TARGETED_CHANGES", "CHECK_AFTER_FIX"):
-            m = re.search(rf"(?is)\b{name}\s*:\s*(.*?)(?=\n[A-Z_]+\s*:|\Z)", clean)
-            if m:
-                body = m.group(1).strip()
-                body = "\n".join(line.strip() for line in body.splitlines() if line.strip())
-                parts.append(f"{name}:\n{body}")
-        packed = "\n\n".join(parts).strip() or clean
-        if len(packed) > max_chars:
-            packed = packed[: max_chars - 3].rstrip() + "..."
-        return packed

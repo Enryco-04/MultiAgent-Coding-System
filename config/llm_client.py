@@ -14,8 +14,7 @@ import requests
 
 class CodexClient:
     """
-    Thin wrapper around the OpenAI Responses API.
-    Model: codex-mini-latest  (or any openai model string)
+    wrapper around the OpenAI Responses API.
     """
 
     def __init__(self, model: str = "codex-mini-latest", api_key: str | None = None):
@@ -35,14 +34,27 @@ class CodexClient:
         json_schema: dict | None = None,
         system_prompt: str | None = None,
     ) -> str:
-        # NOTE: the Responses API does not expose a temperature parameter for
-        # codex-mini-latest; the argument is accepted here so CodexClient and
-        # OllamaClient share the same interface.
+        """
+        Send a completion request to OpenAI Responses API.
+
+        Supports:
+          - optional system prompt (role-separated input)
+          - optional strict JSON schema output format
+
+        Note:
+          - `temperature` is kept in the method signature only for
+            retrocompatibility with other clients (e.g., OllamaClient).
+          - For this OpenAI model path, temperature is not sent because this
+            model rejects that parameter.
+        """
+        # NOTE: temperature is kept in the method signature only for retrocompatibility with other clients (OllamaClient).
+      
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type":  "application/json",
         }
         if system_prompt:
+            # Role-separated input improves policy stability vs single raw prompt.
             input_payload = [
                 {
                     "role": "system",
@@ -61,6 +73,7 @@ class CodexClient:
             "input": input_payload,
         }
         if json_schema:
+            # Enforce structured output when caller needs deterministic parsing.
             payload["text"] = {
                 "format": {
                     "type": "json_schema",
@@ -88,6 +101,11 @@ class CodexClient:
 
     @staticmethod
     def _extract_text(data: dict) -> str:
+        """
+        Extract assistant text across known Responses API payload variants.
+
+        Tries output_text first, then walks output/content blocks.
+        """
         # Newer Responses API shape can include a top-level output_text string.
         output_text = data.get("output_text")
         if isinstance(output_text, str) and output_text.strip():
@@ -134,7 +152,7 @@ class CodexClient:
 
 
 class OllamaClient:
-    """Local Ollama fallback — useful for rapid dev without API keys."""
+    """Local Ollama Client without API keys."""
 
     def __init__(self, model: str = "llama3", base_url: str = "http://localhost:11434"):
         self.model = model
@@ -147,6 +165,7 @@ class OllamaClient:
         json_schema: dict | None = None,
         system_prompt: str | None = None,
     ) -> str:
+        """Generate plain text from local Ollama server (streaming mode)."""
         full_prompt = prompt if not system_prompt else f"{system_prompt}\n\n{prompt}"
         payload = {"model": self.model, "prompt": full_prompt, "stream": True,
                    "options": {"temperature": temperature}}
