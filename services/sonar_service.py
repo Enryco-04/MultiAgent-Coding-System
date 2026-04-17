@@ -244,7 +244,7 @@ class SonarService:
                 issue_types=["CODE_SMELL"],
                 in_new_code_period=in_new_code_period,
             )
-
+        # TODO NOT THE BEST
         if metric_name == "complexity":
             smells = self.get_issues(
                 component=component,
@@ -259,6 +259,22 @@ class SonarService:
                     str(i.get(k, "")) for k in ("message", "rule", "cleanCodeAttribute")
                 ).lower()
                 if "complex" in text or "cognitive" in text:
+                    focused.append(i)
+            return focused or smells
+
+        if metric_name == "cognitive_complexity":
+            smells = self.get_issues(
+                component=component,
+                issue_types=["CODE_SMELL"],
+                in_new_code_period=in_new_code_period,
+            )
+            focused = []
+            for i in smells:
+                text = " ".join(
+                    str(i.get(k, "")) for k in ("message", "rule", "cleanCodeAttribute")
+                ).lower()
+                # java:S3776 is Sonar's canonical Cognitive Complexity rule.
+                if "cognitive" in text or "s3776" in text:
                     focused.append(i)
             return focused or smells
 

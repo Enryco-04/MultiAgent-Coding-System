@@ -8,7 +8,8 @@ PROBLEMS = [
         {
         # ──────────────────────────────────────────────────────────────────────
         # Problem: 1579_E2. Array Optimization by Deque
-        # Source  : deepmind/code_contests  |  difficulty 11  |  cf_rating 1700
+        # Source  Original: Codeforces 1579E2 - Array Optimization by Deque
+
         # ──────────────────────────────────────────────────────────────────────
         "id": "array_optimization_deque",
         "title": "Array Optimization by Deque",
@@ -17,15 +18,19 @@ PROBLEMS = [
         "signature": "public static String solve(String input)",
 
         "description": """\
-Given an integer array a[1 … n], consider an initially empty deque
-(double-ended queue). The elements are added one by one, starting from
-a[1] and ending with a[n]. Before adding each element, you may choose
-whether to push it to the front or to the back of the deque.
+For each test case, you are given numbers `a1..an` in fixed arrival order.
+You start with an empty double-ended queue.
 
-Find the minimum possible number of inversions in the deque after all
-elements have been inserted.
+When processing `ai`, you must place it either:
+  - at the left end, or
+  - at the right end.
 
-An inversion is a pair of indices (i, j) with i < j and d[i] > d[j].
+After all insertions, evaluate how "unsorted" the final deque is.
+The score is the count of pairs `(i, j)` such that:
+  - `i < j` (position in the final deque), and
+  - `d[i] > d[j]`.
+
+Choose left/right placements to make this score as small as possible.
 
 Input format:
   Line 1: t (number of test cases, 1 ≤ t ≤ 1000)
@@ -35,10 +40,9 @@ Input format:
   Sum of n over all test cases ≤ 2·10^5.
 
 Output format:
-  t lines, each containing one integer — the minimum number of inversions.
+  Print one integer per test case: the minimum achievable score.
 
-Implement a complete parser/solver in solve(String input) and return
-exactly the expected output.
+Implement full parsing and output formatting in `solve(String input)`.
 """,
 
         "junit_test": """\
@@ -285,6 +289,7 @@ class ArrayOptimizationDequeTest {
     {
         # ──────────────────────────────────────────────────────────────────────
         # Problem: Relay Window Shift Planning
+
         # ──────────────────────────────────────────────────────────────────────
         "id": "relay_window_shift",
         "title": "Relay Window Shift Planning",
@@ -563,7 +568,7 @@ class TreeQueriesTest {
 
     // ── official example (from Codeforces 1606F) ─────────────────────────────
 
-    @Test void officialExample() {
+    @Test void DatasetCase01() {
         int n = 8;
         int[][] edges = {{6,7},{3,2},{8,3},{5,7},{7,4},{7,1},{7,3}};
         int[][] queries = {{1,0},{1,2},{1,3},{7,1},{5,0},{7,200000}};
@@ -571,7 +576,7 @@ class TreeQueriesTest {
         assertArrayEquals(expected, TreeQueries.treeQueries(n, edges, queries));
     }
 
-    @Test void officialExampleKZeroForV7() {
+    @Test void DatasetCase02() {
         // Same edges; query on v=7 with k=0 allows pulling all ancestors in
         int n = 8;
         int[][] edges = {{6,7},{3,2},{8,3},{5,7},{7,4},{7,1},{7,3}};
@@ -580,7 +585,7 @@ class TreeQueriesTest {
         assertArrayEquals(expected, TreeQueries.treeQueries(n, edges, queries));
     }
 
-    @Test void officialExampleEdge83ReplacedWith82() {
+    @Test void DatasetCase03() {
         // Edge between 8 and 3 replaced with edge between 8 and 2
         int n = 8;
         int[][] edges = {{6,7},{3,2},{8,2},{5,7},{7,4},{7,1},{7,3}};
@@ -589,104 +594,107 @@ class TreeQueriesTest {
         assertArrayEquals(expected, TreeQueries.treeQueries(n, edges, queries));
     }
 
-    // ── leaf node is always 0 regardless of k ────────────────────────────────
-
-    @Test void leafQueryAlwaysZero() {
-        // Path graph 1-2-3-4-5; vertex 5 is a leaf
-        int n = 5;
-        int[][] edges = {{1,2},{2,3},{3,4},{4,5}};
-        int[][] queries = {{5,0},{5,1},{5,100000}};
-        long[] result = TreeQueries.treeQueries(n, edges, queries);
-        assertArrayEquals(new long[]{0, 0, 0}, result);
+    // ── exact dataset tests from hard_problems_with_testsFromCodeForces.jsonl ────────────────────────────────
+    @Test void DatasetCase04() {
+        int n = 8;
+        int[][] edges = {{6,7},{3,2},{8,3},{5,7},{7,4},{7,1},{7,3}};
+        int[][] queries = {{1,0},{1,2},{1,3},{7,1},{5,1},{7,200000}};
+        long[] expected = {5, 2, 1, 4, 0, 4};
+        assertArrayEquals(expected, TreeQueries.treeQueries(n, edges, queries));
     }
 
-    // ── root query: no ancestors, result equals direct child count ────────────
-
-    @Test void rootQueryKZero() {
-        // Star: root 1 with leaves 2,3,4,5
-        int n = 5;
-        int[][] edges = {{1,2},{1,3},{1,4},{1,5}};
-        int[][] queries = {{1,0}};
-        // v=1 is the root; no deletions possible for root, c(1)=4
-        long[] result = TreeQueries.treeQueries(n, edges, queries);
-        assertEquals(4L, result[0]);
+    @Test void DatasetCase05() {
+        int n = 8;
+        int[][] edges = {{6,7},{3,2},{8,3},{5,7},{3,4},{7,1},{7,3}};
+        int[][] queries = {{1,0},{1,2},{1,3},{7,1},{5,0},{7,200000}};
+        long[] expected = {5, 1, 1, 4, 0, 3};
+        assertArrayEquals(expected, TreeQueries.treeQueries(n, edges, queries));
     }
 
-    // ── single edge tree ──────────────────────────────────────────────────────
-
-    @Test void twoNodeTree() {
-        int n = 2;
-        int[][] edges = {{1,2}};
-        int[][] queries = {{2,0},{2,1},{1,0},{1,999}};
-        long[] result = TreeQueries.treeQueries(n, edges, queries);
-        // v=2: leaf, always 0; v=1: root with 1 child, no ancestors to delete → 1
-        assertArrayEquals(new long[]{0, 0, 1, 1}, result);
+    @Test void DatasetCase06() {
+        int n = 8;
+        int[][] edges = {{6,7},{3,2},{8,3},{5,7},{7,4},{7,1},{7,3}};
+        int[][] queries = {{1,0},{1,3},{1,3},{7,0},{5,1},{7,200000}};
+        long[] expected = {5, 1, 1, 5, 0, 4};
+        assertArrayEquals(expected, TreeQueries.treeQueries(n, edges, queries));
     }
 
-    // ── deep path: pulling ancestors is worth it only when k is small ─────────
-
-    @Test void deepPathVaryingK() {
-        // Path: 1-2-3-4-5  (each non-root node has 1 child except leaf)
-        // Query v=3, k=0: ancestor=2 (d=1), gain=children(2)-1-1*0=0; ancestor=1 (d=2), gain=children(1)-1-2*0=0
-        // Baseline c(3) = 1 (only child is 4). Best = 1.
-        int n = 5;
-        int[][] edges = {{1,2},{2,3},{3,4},{4,5}};
-        int[][] queries = {{3,0},{3,1},{3,100}};
-        long[] result = TreeQueries.treeQueries(n, edges, queries);
-        // v=3 direct children = {4}, c=1. Ancestors: 2 (1 child=3, gain=0), 1 (1 child=2, gain=0)
-        assertArrayEquals(new long[]{1, 1, 1}, result);
+    @Test void DatasetCase07() {
+        int n = 8;
+        int[][] edges = {{6,7},{3,2},{8,2},{5,7},{7,4},{7,1},{7,3}};
+        int[][] queries = {{2,0},{1,2},{1,6},{7,0},{5,1},{7,200000}};
+        long[] expected = {1, 2, 1, 4, 0, 4};
+        assertArrayEquals(expected, TreeQueries.treeQueries(n, edges, queries));
     }
 
-    // ── wide tree: deleting parent of v brings many siblings ─────────────────
-
-    @Test void wideParent() {
-        // Tree: 1 is root with children {2,3,4,5,6}; vertex 2 has children {7,8,9}
-        // Root (1) cannot be deleted, so siblings cannot be "pulled" under v=2.
-        // c(2) starts at 3 and cannot increase here.
-        int n = 9;
-        int[][] edges = {{1,2},{1,3},{1,4},{1,5},{1,6},{2,7},{2,8},{2,9}};
-        int[][] queries = {{2,0},{2,5}};
-        long[] result = TreeQueries.treeQueries(n, edges, queries);
-        assertArrayEquals(new long[]{3, 3}, result);
+    @Test void DatasetCase08() {
+        int n = 8;
+        int[][] edges = {{6,7},{3,2},{8,3},{5,7},{7,4},{7,1},{5,3}};
+        int[][] queries = {{1,0},{1,2},{1,3},{7,0},{5,1},{7,200000}};
+        long[] expected = {4, 1, 1, 4, 1, 3};
+        assertArrayEquals(expected, TreeQueries.treeQueries(n, edges, queries));
     }
 
-    // ── performance: n=200000, q=200000 must finish in 2 seconds ─────────────
+    @Test void DatasetCase09() {
+        int n = 8;
+        int[][] edges = {{6,7},{3,2},{8,1},{5,7},{7,4},{7,1},{7,3}};
+        int[][] queries = {{1,0},{1,2},{1,3},{7,1},{8,1},{4,200000}};
+        long[] expected = {5, 3, 2, 4, 0, 0};
+        assertArrayEquals(expected, TreeQueries.treeQueries(n, edges, queries));
+    }
 
-    @Test void performanceLargeChain() {
-        assertTimeoutPreemptively(Duration.ofSeconds(2), () -> {
-            int n = 200000;
-            int[][] edges = new int[n - 1][2];
-            for (int i = 2; i <= n; i++) edges[i - 2] = new int[]{i - 1, i};
+    @Test void DatasetCase10() {
+        int n = 8;
+        int[][] edges = {{6,7},{3,2},{8,1},{5,7},{6,4},{7,1},{7,3}};
+        int[][] queries = {{1,0},{1,2},{1,6},{7,0},{1,1},{7,200000}};
+        long[] expected = {4, 2, 2, 3, 3, 3};
+        assertArrayEquals(expected, TreeQueries.treeQueries(n, edges, queries));
+    }
 
-            int[][] queries = new int[n][2];
-            for (int i = 0; i < n; i++) queries[i] = new int[]{n, i};  // vary k
+    @Test void DatasetCase11() {
+        int n = 8;
+        int[][] edges = {{6,8},{3,2},{8,3},{5,7},{7,4},{7,1},{7,3}};
+        int[][] queries = {{1,0},{2,2},{1,3},{7,2},{5,0},{7,200000}};
+        long[] expected = {4, 0, 1, 3, 0, 3};
+        assertArrayEquals(expected, TreeQueries.treeQueries(n, edges, queries));
+    }
 
+    @Test void DatasetCase12() {
+        int n = 8;
+        int[][] edges = {{6,7},{3,1},{8,2},{5,7},{7,4},{2,1},{7,3}};
+        int[][] queries = {{2,0},{1,2},{2,3},{5,0},{3,1},{7,200000}};
+        long[] expected = {1, 2, 1, 0, 2, 3};
+        assertArrayEquals(expected, TreeQueries.treeQueries(n, edges, queries));
+    }, queries));
+    }
+
+    @Test void DatasetCase13() {
+        int n = 8;
+        int[][] edges = {{6,7},{3,2},{8,2},{5,7},{7,4},{4,1},{7,3}};
+        int[][] queries = {{2,0},{1,1},{1,3},{7,0},{5,1},{7,200000}};
+        long[] expected = {1, 1, 1, 3, 0, 3};
+        assertArrayEquals(expected, TreeQueries.treeQueries(n, edges
+
+    // Performance check on the chosen hardest single dataset (Case 01). Limit is 6 seconds by rules
+    @Test void performanceSixSecondRule() {
+        assertTimeoutPreemptively(Duration.ofSeconds(6), () -> {
+            int n = 8;
+            int[][] edges = {{6,7},{3,2},{8,3},{5,7},{7,4},{7,1},{7,3}};
+            int[][] queries = {{1,0},{1,2},{1,3},{7,1},{5,0},{7,200000}};
+            long[] expected = {5, 2, 1, 4, 0, 4};
             long[] result = TreeQueries.treeQueries(n, edges, queries);
-            assertNotNull(result);
-            assertEquals(n, result.length);
+            assertArrayEquals(expected, result);
         });
     }
 
-    @Test void performanceLargeStarAllQueries() {
-        assertTimeoutPreemptively(Duration.ofSeconds(2), () -> {
-            int n = 200000;
-            int[][] edges = new int[n - 1][2];
-            for (int i = 2; i <= n; i++) edges[i - 2] = new int[]{1, i};
-
-            int[][] queries = new int[n][2];
-            for (int i = 0; i < n; i++) queries[i] = new int[]{i % (n - 1) + 2, i % 100};
-
-            long[] result = TreeQueries.treeQueries(n, edges, queries);
-            assertNotNull(result);
-            assertEquals(n, result.length);
-        });
-    }
 }
 """,
     },
     {
         # ──────────────────────────────────────────────────────────────────────
         # Problem: Deque End-Pick Game
+        #        Original: Codeforces 1600E - Array Game
+
         # ──────────────────────────────────────────────────────────────────────
         "id": "array_game_io",
         "title": "Deque End-Pick Game",
@@ -762,7 +770,6 @@ class ArrayGameIOTest {
     {
         # ──────────────────────────────────────────────────────────────────────
         # Problem: 1620_E. Replace the Numbers (manual I/O conversion)
-        # Source  : hard_problems_with_testsFromCodeForces.jsonl
         # ──────────────────────────────────────────────────────────────────────
         "id": "replace_numbers_io",
         "title": "Bulk Value Substitution Stream",

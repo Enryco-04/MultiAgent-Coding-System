@@ -96,8 +96,25 @@ class CodexClient:
             ) from exc
         data = resp.json()
         text = self._extract_text(data)
-        print(text)
+        self._print_model_output(text, json_schema=json_schema)
         return text
+
+    @staticmethod
+    def _print_model_output(text: str, json_schema: dict | None = None) -> None:
+        """
+        Print model output for logs.
+
+        If caller requested structured JSON, pretty-print it with indentation.
+        Fallback to raw text if parsing fails.
+        """
+        if json_schema:
+            try:
+                payload = json.loads(text)
+                print(json.dumps(payload, indent=2, ensure_ascii=False))
+                return
+            except json.JSONDecodeError:
+                pass
+        print(text)
 
     @staticmethod
     def _extract_text(data: dict) -> str:

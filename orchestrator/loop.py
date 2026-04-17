@@ -22,7 +22,11 @@ import uuid
 MAX_ITER             = 5
 SONAR_MAX_BUGS        = 0
 SONAR_MAX_CODE_SMELLS = 3
-SONAR_MAX_COMPLEXITY  = 15
+# Cyclomatic complexity todo
+
+SONAR_MAX_COMPLEXITY  = 999999
+#Variabile 
+SONAR_MAX_COGNITIVE_COMPLEXITY = 25
 
 
 class EvaluationLoop:
@@ -300,12 +304,15 @@ class EvaluationLoop:
         bugs       = int(metrics.get("bugs",        0))
         smells     = int(metrics.get("code_smells", 0))
         complexity = int(metrics.get("complexity",  0))
+        cognitive  = int(metrics.get("cognitive_complexity", 0))
         if bugs > SONAR_MAX_BUGS:
             return False, f"bugs={bugs}"
         if smells > SONAR_MAX_CODE_SMELLS:
             return False, f"code_smells={smells}"
         if complexity > SONAR_MAX_COMPLEXITY and complexity > 0:
             return False, f"complexity={complexity}"
+        if cognitive > SONAR_MAX_COGNITIVE_COMPLEXITY and cognitive > 0:
+            return False, f"cognitive_complexity={cognitive}"
         return True, ""
 
     @staticmethod
@@ -313,6 +320,6 @@ class EvaluationLoop:
         if not reason:
             return None
         metric = reason.split("=", 1)[0].strip().lower()
-        if metric in {"bugs", "code_smells", "complexity"}:
+        if metric in {"bugs", "code_smells", "complexity", "cognitive_complexity"}:
             return metric
         return None

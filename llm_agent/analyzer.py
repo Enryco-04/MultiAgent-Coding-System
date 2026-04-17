@@ -66,9 +66,28 @@ class AnalyzerAgent:
         )
 
     def analyze_sonar(self, code: str, metrics: dict, issues: list) -> str:
-        key_metrics = {k: metrics.get(k, "N/A") for k in ("bugs", "code_smells", "complexity")}
+        key_metrics = {
+            k: metrics.get(k, "N/A")
+            for k in ("bugs", "code_smells", "complexity", "cognitive_complexity")
+        }
+        def _flow_summary(issue: dict) -> str:
+            flows = issue.get("flows") or []
+            points = []
+            for flow in flows[:3]:
+                for loc in (flow.get("locations") or [])[:1]:
+                    rng = loc.get("textRange") or {}
+                    line = rng.get("startLine", "?")
+                    delta = loc.get("msg", "?")
+                    points.append(f"L{line}:{delta}")
+            return ", ".join(points) if points else "no-flow-details"
+
         top_issues = "; ".join(
-            f"line {i.get('line', '?')}: {i.get('message', '?')}" for i in issues[:3]
+            (
+                f"line {i.get('line', '?')} "
+                f"[rule={i.get('rule', '?')}]: {i.get('message', '?')} "
+                f"| flows: {_flow_summary(i)}"
+            )
+            for i in issues[:3]
         ) or "none"
         return self._analyze(
             context=(
