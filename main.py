@@ -1,139 +1,49 @@
 """
 main.py
 -------
-Entry point. Runs all problems through the evaluation pipeline.
+CLI mode selector for the project.
 
-Usage:
-  python main.py                      # run all problems
-  python main.py sliding_window_max   # run one problem by id
+Modes:
+  python main.py normal [problem_id ...]
+  python main.py future [args ...]
 
-Environment variables (set in .env):
-  OPENAI_API_KEY   - required for CodexClient
-  SONAR_TOKEN      - required for SonarQube
-  SONAR_PROJECT_KEY
-  SONAR_HOST_URL   - default http://localhost:9000
+Backward-compatible usage:
+  python main.py
+  python main.py sliding_window_max
 """
 
-import os
-import re
 import sys
-import json
-from dotenv import load_dotenv
 
-load_dotenv(override=True)
-
-from config.llm_client           import OllamaClient, CodexClient         # swap to OllamaClient for local dev
-from llm_agent.coder             import CoderAgent
-from llm_agent.analyzer          import AnalyzerAgent
-from services.workspace_manager  import WorkspaceManager
-from services.docker_runner       import DockerRunner
-from services.sonar_service       import SonarService
-from orchestrator.loop            import EvaluationLoop
-from problems.problem_bank        import PROBLEMS, get_problem
+from orchestrator.loop import run_future_mode, run_normal_mode
 
 
-def _format_detailed_results(results: list[dict]) -> list[dict]:
-    """
-    Convert raw loop output into a compact, analysis-friendly JSON shape.
-
-    Output per problem:
-      - problem_id
-      - attempts: passrate, failed tests, sonar metrics
-    """
-    detailed = []
-    for r in results:
-        iterations = []
-        for a in r.get("attempt_history", []):
-            jr = a.get("junit") or {}
-            passed = jr.get("tests_passed", 0)
-            run = jr.get("tests_run", 0)
-            iterations.append(
-                {
-                    "attempt": a.get("iteration"),
-                    "passrate": f"{passed}/{run}",
-                    "tests_failed": jr.get("failures_with_values", []),
-                    "sonar_metrics": a.get("sonar_metrics", {}),
-                }
-            )
-
-        detailed.append(
-            {
-                "problem_id": r.get("problem_id"),
-                "attempts": iterations,
-            }
-        )
-    return detailed
+DEFAULT_MODE = "normal"
+FUTURE_MODE = "future"
+VALID_MODES = {DEFAULT_MODE, FUTURE_MODE}
 
 
-def build_components():
-    """
-    Build and wire all runtime components (LLM agents, workspace, runner, Sonar).
+def _split_mode_and_args(argv: list[str]) -> tuple[str, list[str]]:
+    if not argv:
+        return DEFAULT_MODE, []
 
-    """
-    llm = CodexClient(model="gpt-5-nano")
+    first_arg = argv[0].lower()
+    if first_arg in VALID_MODES:
+        return first_arg, argv[1:]
 
-    coder    = CoderAgent(llm)
-    analyzer = AnalyzerAgent(llm)
-    workspace = WorkspaceManager(base_dir="workspace")
-    runner   = DockerRunner()
-
-    sonar = None
-    token = os.getenv("SONAR_TOKEN")
-    key   = os.getenv("SONAR_PROJECT_KEY")
-    host  = os.getenv("SONAR_HOST_URL", "http://localhost:9000")
-    if token and key:
-        sonar = SonarService(token=token, project_key=key, host=host)
-
-    loop = EvaluationLoop(coder, analyzer, workspace, runner, sonar)
-    return loop
+    # Preserve the old CLI: `python main.py <problem_id ...>`
+    return DEFAULT_MODE, argv
 
 
-def main():
-    """CLI entrypoint: run selected problems and dump compact results.json."""
-    loop = build_components()
+def main(argv: list[str] | None = None):
+    mode, mode_args = _split_mode_and_args(argv or sys.argv[1:])
 
-    # Which problems to run
-    if len(sys.argv) > 1:
-        # Run only requested ids: python main.py <id1> <id2> ...
-        problems = [get_problem(pid) for pid in sys.argv[1:]]
-    else:
-        # Default mode: evaluate the full problem bank.
-        problems = PROBLEMS
+    if mode == DEFAULT_MODE:
+        return run_normal_mode(mode_args)
 
-    results = []
-    for problem in problems:
-        result = loop.run(problem)
-        results.append(result)
+    if mode == FUTURE_MODE:
+        return run_future_mode(mode_args)
 
-    # ── Summary ──────────────────────────────────────────────────────────────
-    print("\n\n" + "═"*60)
-    print("  SUMMARY")
-    print("═"*60)
-    for r in results:
-        icon = "✅" if r["status"] == "PASS" else "❌"
-        jr   = r.get("junit_result") or {}
-        p    = jr.get("tests_passed", 0)
-        t    = jr.get("tests_run",    0)
-        print(f"{icon}  [{r['status']:4}]  {r['title']:<35}  {p}/{t} tests  (attempt {r['attempts']})")
-
-    # Save full results — strip ANSI escape codes from raw_output so the
-    # JSON is human-readable 
-    ansi_escape = re.compile(r'\x1b\[[0-9;]*m')
-
-    def _clean(obj):
-        if isinstance(obj, str):
-            return ansi_escape.sub('', obj)
-        if isinstance(obj, dict):
-            return {k: _clean(v) for k, v in obj.items()}
-        if isinstance(obj, list):
-            return [_clean(v) for v in obj]
-        return obj
-
-    with open("results.json", "w", encoding="utf-8") as f:
-        clean_results = [{k: _clean(v) for k, v in r.items() if k != "final_code"} for r in results]
-        detailed = _format_detailed_results(clean_results)
-        json.dump(detailed, f, indent=2, ensure_ascii=False)
-    print("\nFull results saved to results.json")
+    raise ValueError(f"Unsupported mode: {mode}")
 
 
 if __name__ == "__main__":
