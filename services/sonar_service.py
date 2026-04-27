@@ -8,10 +8,7 @@ SonarQube client. Restored to the approach that worked in the original project:
   - After scan: polls /api/ce/component until SUCCESS instead of fixed sleep
 """
 
-import json
 import os
-import re
-import subprocess
 import time
 
 import requests
@@ -30,16 +27,17 @@ METRIC_KEYS = [
 
 
 class SonarService:
-    def __init__(self, token: str, project_key: str, host: str = "http://localhost:9000"):
+    def __init__(self, token: str, project_key: str, docker_runner, host: str = "http://localhost:9000"):
         # `project_key` acts as a base key; loop may override per attempt.
-        self.token       = token
+        self.token = token
         self.project_key = project_key
-        self.host        = host
-        self.api         = f"{host}/api"
+        self.docker_runner = docker_runner
+        self.host = host
+        self.api = f"{host}/api"
 
     # ── Scanner ───────────────────────────────────────────────────────────────
 
-    def scan(self, source_folder: str, iteration: int, project_key: str | None = None) -> None:
+    def sonar_scan(self, source_folder: str, project_key: str | None = None) -> None:
         """
         Run sonar-scanner-cli as a Docker container, reaching SonarQube at port 9000.
         """
@@ -51,24 +49,11 @@ class SonarService:
             f"(project_key={effective_project_key}, token: {token_preview}) ..."
         )
 
-        cmd = [
-            "docker", "run", "--rm",
-            "-v", f"{abs_folder}:/usr/src",
-            "sonarsource/sonar-scanner-cli",
-            f"-Dsonar.projectKey={effective_project_key}",
-            "-Dsonar.sources=/usr/src",
-            "-Dsonar.java.binaries=/usr/src/bin",
-            "-Dsonar.host.url=http://host.docker.internal:9000",
-            f"-Dsonar.login={self.token}",
-            "-Dsonar.scm.disabled=true",
-            "-Dsonar.exclusions=**/*Test.java",
-            "-Dsonar.issue.ignore.multicriteria=e1",
-            # this particular rule is not needed, it's about package naming but it is irrelevant in our project and it interferies
-            "-Dsonar.issue.ignore.multicriteria.e1.ruleKey=java:S1220",
-            "-Dsonar.issue.ignore.multicriteria.e1.resourceKey=**/*.java",
-        ]
-
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        result = self.docker_runner.run_sonar_scanner(
+            source_folder=source_folder,
+            project_key=effective_project_key,
+            token=self.token,
+        )
         if result.returncode != 0:
             print(f"  [sonar] stderr: {result.stderr[-600:]}")
             raise RuntimeError("SonarQube scan failed")
@@ -76,6 +61,10 @@ class SonarService:
         print("  [sonar] scan submitted — waiting for background task...")
         self._wait_for_analysis(component=effective_project_key)
         self._wait_for_measures(component=effective_project_key)
+
+    def scan(self, source_folder: str, iteration: int, project_key: str | None = None) -> None:
+        """Backward-compatible alias while callers migrate to sonar_scan()."""
+        self.sonar_scan(source_folder=source_folder, project_key=project_key)
 
     # ── Wait for background task ──────────────────────────────────────────────
 

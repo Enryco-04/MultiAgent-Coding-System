@@ -68,7 +68,7 @@ def build_components() -> "EvaluationLoop":
     key = os.getenv("SONAR_PROJECT_KEY")
     host = os.getenv("SONAR_HOST_URL", "http://localhost:9000")
     if token and key:
-        sonar = SonarService(token=token, project_key=key, host=host)
+        sonar = SonarService(token=token, project_key=key, docker_runner=runner, host=host)
 
     return EvaluationLoop(coder, analyzer, workspace, runner, sonar)
 
@@ -216,7 +216,7 @@ class EvaluationLoop:
             self.workspace.write_java(last_code, impl_class, attempt)
             self.workspace.write_java(problem["junit_test"], test_class, attempt)
 
-            result = self.runner.run(attempt, impl_class, test_class, self.workspace)
+            result = self.runner.run_java_tester(attempt, impl_class, test_class, self.workspace)
             attempt_entry["junit"] = {
                 "compile_ok": result.get("compile_ok", False),
                 "compile_errors": result.get("compile_errors"),
@@ -331,7 +331,7 @@ class EvaluationLoop:
     def _run_sonar(self, iteration: int, component: str) -> tuple[dict, list]:
         iter_path = self.workspace.iteration_path(iteration)
         try:
-            self.sonar.scan(iter_path, iteration, project_key=component)
+            self.sonar.sonar_scan(iter_path, project_key=component)
             metrics = self.sonar.get_metrics(component=component)
             issues = self.sonar.get_issues(
                 component=component,
